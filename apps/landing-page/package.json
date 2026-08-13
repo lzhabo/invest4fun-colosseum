@@ -1,0 +1,20 @@
+{
+  "name": "@invest4fun/landing-page",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4321",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/archivo-black": "^5.2.6",
+    "@fontsource/dm-sans": "^5.2.6",
+    "@fontsource/instrument-serif": "^5.2.6"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vite": "^7.0.6"
+  }
+}

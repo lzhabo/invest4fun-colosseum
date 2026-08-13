@@ -1,0 +1,33 @@
+{
+  "name": "invest4fun",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n web,api,worker -c blue,green,yellow \"npm:dev:web\" \"npm:dev:api\" \"npm:dev:worker\"",
+    "dev:landing-page": "npm run dev -w @invest4fun/landing-page",
+    "dev:web": "npm run dev -w @invest4fun/web",
+    "dev:api": "npm run dev -w @invest4fun/api",
+    "dev:worker": "npm run dev -w @invest4fun/worker",
+    "dev:infra": "docker compose up -d postgres",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "db:migrate": "npm run migrate -w @invest4fun/database"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "concurrently": "^9.2.0",
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Invest4Fun</title>
+  <rect width="64" height="64" rx="10" fill="#79eab1"/>
+  <path d="M16 17h8v30h-8zm12 8h7l1 4c2-3 5-5 9-5 7 0 11 5 11 13v10h-8V38c0-5-2-7-6-7s-6 3-6 8v8h-8z" fill="#07110d"/>
+</svg>

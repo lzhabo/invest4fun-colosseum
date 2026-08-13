@@ -1,0 +1,26 @@
+:root {
+  --font-body: "DM Sans", system-ui, sans-serif;
+  --font-brand: "Archivo Black", sans-serif;
+  --ink: #090a0b;
+  --muted: #62666f;
+  --paper: #ffffff;
+  --ground: #f1f3f6;
+  --line: #cbd0d8;
+  --line-strong: #111315;
+  --acid: #baff00;
+  --acid-hover: #a8e900;
+  --coral: #ff4d44;
+  --blue: #1247e8;
+  --blue-soft: #eef3ff;
+  --success: #21a447;
+  --warning: #e59b00;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --shadow: 0 2px 0 rgba(8, 10, 12, 0.08);
+  --focus-ring: rgba(18, 71, 232, 0.35);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--ground);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
