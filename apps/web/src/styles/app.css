@@ -924,6 +924,115 @@
   color: var(--muted);
   font-size: 11px;
 }
+.ideas-card-stage {
+  width: min(980px, 100%);
+  display: grid;
+  grid-template-columns: 92px minmax(0, 680px) 92px;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  min-height: 620px;
+  margin: 0 auto;
+}
+.idea-swipe-card {
+  position: relative;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 16px 14px 0 var(--line);
+  touch-action: pan-y;
+  user-select: none;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.idea-swipe-card.is-invest {
+  box-shadow: 16px 14px 0 var(--success);
+}
+.idea-swipe-card.is-skip {
+  box-shadow: 16px 14px 0 var(--coral);
+}
+.idea-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 28px 30px 20px;
+}
+.idea-card-header > div:last-child {
+  min-width: 0;
+  flex: 1;
+}
+.idea-card-header h2 {
+  margin: 9px 0 0;
+  font: 34px / 1 var(--font-brand);
+}
+.idea-card-visual {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  min-height: 250px;
+  padding: 28px 30px;
+  background: var(--ground);
+}
+.idea-allocation-ring {
+  display: grid;
+  width: 128px;
+  height: 128px;
+  place-content: center;
+  border: 18px solid var(--acid);
+  border-right-color: var(--blue);
+  border-radius: 50%;
+  text-align: center;
+}
+.idea-allocation-ring span {
+  font: 25px / 1 var(--font-brand);
+}
+.idea-allocation-ring small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.idea-allocation-bars {
+  display: flex;
+  align-items: end;
+  gap: 7px;
+  height: 126px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--line);
+}
+.idea-allocation-bars i {
+  display: block;
+  height: 74%;
+  border-radius: 4px 4px 0 0;
+  background: var(--blue);
+}
+.idea-allocation-bars i:nth-child(2n) {
+  height: 54%;
+  background: var(--acid-dark);
+}
+.idea-card-copy {
+  display: grid;
+  gap: 13px;
+  padding: 22px 30px 28px;
+}
+.idea-card-copy p {
+  min-height: 42px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.idea-card-copy small {
+  color: var(--muted);
+  font-size: 11px;
+}
 .card-decision-flash {
   position: absolute;
   inset: 0;
@@ -1227,6 +1336,11 @@
     gap: 4px;
     min-height: 590px;
   }
+  .ideas-card-stage {
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    gap: 4px;
+    min-height: 590px;
+  }
   .gesture {
     flex-direction: column;
     gap: 2px;
@@ -1238,6 +1352,10 @@
     text-align: center;
   }
   .swipe-card {
+    min-height: 540px;
+    box-shadow: 8px 9px 0 var(--line);
+  }
+  .idea-swipe-card {
     min-height: 540px;
     box-shadow: 8px 9px 0 var(--line);
   }
@@ -1320,6 +1438,11 @@
     gap: 12px;
     min-height: 0;
   }
+  .ideas-card-stage {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: 0;
+  }
   .gesture {
     flex-direction: row;
     justify-content: space-between;
@@ -1341,6 +1464,10 @@
     min-height: 520px;
     box-shadow: 6px 7px 0 var(--line);
   }
+  .idea-swipe-card {
+    min-height: 520px;
+    box-shadow: 6px 7px 0 var(--line);
+  }
   .card-head,
   .price-chart,
   .swipe-card-copy {
@@ -1352,6 +1479,20 @@
   }
   .chart-meta span {
     font-size: 25px;
+  }
+  .idea-card-header,
+  .idea-card-visual,
+  .idea-card-copy {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+  .idea-card-visual {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 18px;
+  }
+  .idea-allocation-bars {
+    width: 100%;
   }
   .legacy-basket-bar,
   .portfolio-summary,
