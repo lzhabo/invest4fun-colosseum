@@ -1,7 +1,15 @@
 import type { FeedItem, Idea } from "@invest4fun/contracts";
 
+const baseAsset = {
+  chain: "solana" as const,
+  marketDataSource: "curated" as const,
+  marketDataUpdatedAt: null,
+};
+
 const solana: FeedItem = {
+  ...baseAsset,
   id: "solana",
+  mint: "So11111111111111111111111111111111111111112",
   symbol: "SOL",
   name: "Solana",
   assetType: "token",
@@ -10,7 +18,9 @@ const solana: FeedItem = {
   sourceLabel: "Curated ecosystem data",
 };
 const usdc: FeedItem = {
+  ...baseAsset,
   id: "usdc",
+  mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   symbol: "USDC",
   name: "USD Coin",
   assetType: "token",
@@ -19,7 +29,9 @@ const usdc: FeedItem = {
   sourceLabel: "Curated ecosystem data",
 };
 const climateGrowth: FeedItem = {
+  ...baseAsset,
   id: "climate-growth",
+  mint: null,
   symbol: "CLMT",
   name: "Climate Growth Basket",
   assetType: "stock",

@@ -47,6 +47,13 @@ export function FeedScreen() {
           Explore individual assets in Feed or choose a prepared Idea. Your
           selections stay in a draft basket until you review and confirm.
         </p>
+        {!error && feed.length ? (
+          <span className="source-note">
+            {feed[0]?.marketDataUpdatedAt
+              ? `Market data updated ${relativeTime(feed[0].marketDataUpdatedAt)}`
+              : "Curated asset data"}
+          </span>
+        ) : null}
       </div>
       {error ? (
         <div className="inline-alert" role="alert">
@@ -103,6 +110,19 @@ export function FeedScreen() {
       </aside>
     </div>
   );
+}
+
+function relativeTime(value: string) {
+  const ageSeconds = Math.max(
+    0,
+    Math.floor((Date.now() - Date.parse(value)) / 1_000),
+  );
+  if (ageSeconds < 10) return "just now";
+  if (ageSeconds < 60) return `${ageSeconds}s ago`;
+  const minutes = Math.floor(ageSeconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ago`;
 }
 
 function CatalogSection({

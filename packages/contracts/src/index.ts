@@ -19,6 +19,8 @@ export type HealthResponse = z.infer<typeof healthResponseSchema>;
 export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 
 export const assetSchema = z.object({
+  chain: z.literal("solana"),
+  mint: z.string().min(32).nullable(),
   symbol: z.string().min(1),
   name: z.string().min(1),
   assetType: z.enum(["token", "stock"]),
@@ -29,6 +31,14 @@ export const assetSchema = z.object({
 export const feedItemSchema = assetSchema.extend({
   id: z.string().min(1),
   sourceLabel: z.string().min(1),
+  marketDataSource: z.enum([
+    "curated",
+    "coingecko",
+    "geckoterminal",
+    "jupiter",
+    "alchemy",
+  ]),
+  marketDataUpdatedAt: z.string().datetime().nullable(),
 });
 
 export const ideaSchema = z.object({
@@ -39,7 +49,12 @@ export const ideaSchema = z.object({
   positions: z.array(assetSchema).min(1),
 });
 
-export const feedResponseSchema = z.object({ items: z.array(feedItemSchema) });
+export const feedResponseSchema = z.object({
+  sessionId: z.string().uuid(),
+  generatedAt: z.string().datetime(),
+  expiresAt: z.string().datetime(),
+  items: z.array(feedItemSchema),
+});
 export const ideasResponseSchema = z.object({ items: z.array(ideaSchema) });
 
 export type Asset = z.infer<typeof assetSchema>;

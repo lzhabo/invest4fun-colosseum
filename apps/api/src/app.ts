@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Database } from "@invest4fun/database";
 import { PrivyClient } from "@privy-io/node";
 import express from "express";
@@ -51,9 +52,16 @@ export function createApp(database: Database) {
     }
   });
 
-  app.get("/api/feed", (_request, response) =>
-    response.json({ items: feedItems }),
-  );
+  app.get("/api/feed", (_request, response) => {
+    const generatedAt = new Date();
+    const expiresAt = new Date(generatedAt.getTime() + 60_000);
+    response.json({
+      sessionId: randomUUID(),
+      generatedAt: generatedAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      items: feedItems,
+    });
+  });
   app.get("/api/ideas", (_request, response) =>
     response.json({ items: ideas }),
   );
