@@ -47,3 +47,30 @@ export type FeedItem = z.infer<typeof feedItemSchema>;
 export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
 export type IdeasResponse = z.infer<typeof ideasResponseSchema>;
+
+export const walletSummarySchema = z.object({
+  id: z.string().uuid(),
+  chain: z.literal("solana"),
+  address: z.string().min(32),
+  role: z.enum(["embedded", "external"]),
+  provider: z.string().min(1),
+  label: z.string().nullable(),
+  active: z.boolean(),
+});
+
+export const accountBootstrapResponseSchema = z.object({
+  user: z.object({
+    id: z.string().uuid(),
+    status: z.enum(["active", "suspended", "deleted"]),
+  }),
+  identity: z.object({
+    provider: z.string().min(1),
+    externalSubject: z.string().min(1),
+  }),
+  wallets: z.array(walletSummarySchema),
+});
+
+export type WalletSummary = z.infer<typeof walletSummarySchema>;
+export type AccountBootstrapResponse = z.infer<
+  typeof accountBootstrapResponseSchema
+>;

@@ -3,6 +3,7 @@ import { PrivyClient } from "@privy-io/node";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { bootstrapAccount } from "./account-bootstrap.js";
 import { feedItems, ideas } from "./catalog.js";
 
 export function createApp(database: Database) {
@@ -80,7 +81,8 @@ export function createApp(database: Database) {
     try {
       const privy = new PrivyClient({ appId, appSecret });
       const claims = await privy.utils().auth().verifyAuthToken(accessToken);
-      response.json({ privyUserId: claims.user_id, status: "authenticated" });
+      const account = await bootstrapAccount(database, privy, claims.user_id);
+      response.json(account);
     } catch {
       response.status(401).json({ error: "INVALID_AUTH_TOKEN" });
     }

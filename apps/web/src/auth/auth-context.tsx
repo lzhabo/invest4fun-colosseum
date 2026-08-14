@@ -1,3 +1,4 @@
+import { accountBootstrapResponseSchema } from "@invest4fun/contracts";
 import {
   PrivyProvider,
   type User,
@@ -9,7 +10,13 @@ import {
   toSolanaWalletConnectors,
   useWallets as useSolanaWallets,
 } from "@privy-io/react-auth/solana";
-import { createContext, type ReactNode, useContext } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 
 type AuthState = {
   configured: boolean;
@@ -21,6 +28,7 @@ type AuthState = {
   getAccessToken: () => Promise<string | null>;
   wallets: WalletSummary[];
   walletsReady: boolean;
+  accountReady: boolean;
 };
 
 export type WalletSummary = {
@@ -40,6 +48,7 @@ const demoAuth: AuthState = {
   getAccessToken: async () => null,
   wallets: [],
   walletsReady: true,
+  accountReady: true,
 };
 
 const AuthContext = createContext<AuthState>(demoAuth);
@@ -56,13 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <PrivyProvider
       appId={privyAppId}
       config={{
-        loginMethods: ["email", "wallet"],
+        loginMethods: ["email", "google", "passkey", "wallet"],
         appearance: {
           walletChainType: "solana-only",
           showWalletLoginFirst: true,
         },
         externalWallets: { solana: { connectors: toSolanaWalletConnectors() } },
-        embeddedWallets: { solana: { createOnLogin: "users-without-wallets" } },
+        embeddedWallets: { solana: { createOnLogin: "all-users" } },
       }}
     >
       <PrivyAuthBridge>{children}</PrivyAuthBridge>
@@ -75,16 +84,38 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
   const { wallets: allWallets, ready: allWalletsReady } = usePrivyWallets();
   const { wallets: solanaWallets, ready: solanaWalletsReady } =
     useSolanaWallets();
+  const [accountReady, setAccountReady] = useState(false);
   const { login } = useLogin({
     onComplete: async () => {
       const accessToken = await getAccessToken();
       if (!accessToken) return;
-      await fetch("/api/auth/bootstrap", {
+      const response = await fetch("/api/auth/bootstrap", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+      if (!response.ok) throw new Error("ACCOUNT_BOOTSTRAP_FAILED");
+      accountBootstrapResponseSchema.parse(await response.json());
+      setAccountReady(true);
     },
   });
+
+  useEffect(() => {
+    if (!authenticated) {
+      setAccountReady(false);
+      return;
+    }
+    void (async () => {
+      const accessToken = await getAccessToken();
+      if (!accessToken) return;
+      const response = await fetch("/api/auth/bootstrap", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!response.ok) return;
+      accountBootstrapResponseSchema.parse(await response.json());
+      setAccountReady(true);
+    })();
+  }, [authenticated, getAccessToken]);
 
   return (
     <AuthContext.Provider
@@ -113,6 +144,7 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
           };
         }),
         walletsReady: allWalletsReady && solanaWalletsReady,
+        accountReady,
       }}
     >
       {children}

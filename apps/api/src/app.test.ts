@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./app.js";
 
 function database(ping: () => Promise<void>): Database {
-  return { ping, close: vi.fn() };
+  return { ping, query: vi.fn(), close: vi.fn() };
 }
 
 describe("service probes", () => {
