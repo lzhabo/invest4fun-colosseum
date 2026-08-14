@@ -12,6 +12,7 @@
   "dependencies": {
     "@invest4fun/contracts": "0.1.0",
     "@invest4fun/database": "0.1.0",
+    "@privy-io/node": "0.27.0",
     "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",

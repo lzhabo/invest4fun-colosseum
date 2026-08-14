@@ -1,4 +1,5 @@
 import type { Database } from "@invest4fun/database";
+import { PrivyClient } from "@privy-io/node";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
@@ -55,6 +56,35 @@ export function createApp(database: Database) {
   app.get("/api/ideas", (_request, response) =>
     response.json({ items: ideas }),
   );
+
+  app.post("/api/auth/bootstrap", async (request, response) => {
+    const appId = process.env.PRIVY_APP_ID;
+    const appSecret = process.env.PRIVY_APP_SECRET;
+    const authorization = request.header("authorization");
+    const accessToken = authorization?.startsWith("Bearer ")
+      ? authorization.slice("Bearer ".length)
+      : undefined;
+
+    if (!appId || !appSecret) {
+      response.status(503).json({
+        error: "PRIVY_SERVER_NOT_CONFIGURED",
+        message: "Privy server credentials are not configured.",
+      });
+      return;
+    }
+    if (!accessToken) {
+      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      return;
+    }
+
+    try {
+      const privy = new PrivyClient({ appId, appSecret });
+      const claims = await privy.utils().auth().verifyAuthToken(accessToken);
+      response.json({ privyUserId: claims.user_id, status: "authenticated" });
+    } catch {
+      response.status(401).json({ error: "INVALID_AUTH_TOKEN" });
+    }
+  });
 
   return app;
 }

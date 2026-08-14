@@ -12,6 +12,11 @@
     "@fontsource/archivo-black": "^5.2.6",
     "@fontsource/dm-sans": "^5.2.6",
     "@invest4fun/contracts": "0.1.0",
+    "@privy-io/react-auth": "3.35.2",
+    "@solana-program/memo": "^0.8.0",
+    "@solana-program/system": "^0.8.0",
+    "@solana-program/token": "^0.6.0",
+    "@solana/kit": "^5.5.1",
     "lucide-react": "^0.468.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

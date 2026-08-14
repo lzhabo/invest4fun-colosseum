@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ServiceStatus } from "../../app/use-service-health";
+import { useAuth } from "../../auth/auth-context";
+import { WalletMenu } from "./WalletMenu";
 
 export type AppView = "feed" | "portfolio" | "activity" | "account";
 
@@ -28,6 +30,8 @@ export function AppShell({
   serviceStatus: ServiceStatus;
   children: ReactNode;
 }) {
+  const auth = useAuth();
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -63,10 +67,28 @@ export function AppShell({
                 ? "Services offline"
                 : "Checking services"}
           </span>
-          <button className="wallet-button" type="button" disabled>
-            <Wallet aria-hidden="true" />
-            Sign in
-          </button>
+          {auth.authenticated ? (
+            <WalletMenu
+              email={auth.user?.email?.address}
+              wallets={auth.wallets}
+              onLogout={auth.logout}
+            />
+          ) : (
+            <button
+              className="wallet-button"
+              type="button"
+              disabled={!auth.configured || !auth.ready}
+              onClick={auth.login}
+              title={
+                auth.configured
+                  ? undefined
+                  : "Set VITE_PRIVY_APP_ID to enable Privy"
+              }
+            >
+              <Wallet aria-hidden="true" />
+              Sign in
+            </button>
+          )}
         </div>
       </header>
 

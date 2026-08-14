@@ -32,3 +32,4 @@ docker compose up --build
 
 See [docs/codebase-foundation.md](./docs/codebase-foundation.md) for the ownership rules and the decisions deliberately left open.
 See [docs/product-user-journey.md](./docs/product-user-journey.md) for the current user journey, operation flow, data candidates, and open product decisions.
+See [docs/privy-integration.md](./docs/privy-integration.md) for the Privy setup and authentication flow.
