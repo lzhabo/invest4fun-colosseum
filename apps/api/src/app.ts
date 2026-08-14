@@ -2,6 +2,7 @@ import type { Database } from "@invest4fun/database";
 import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
+import { feedItems, ideas } from "./catalog.js";
 
 export function createApp(database: Database) {
   const app = express();
@@ -47,6 +48,13 @@ export function createApp(database: Database) {
       });
     }
   });
+
+  app.get("/api/feed", (_request, response) =>
+    response.json({ items: feedItems }),
+  );
+  app.get("/api/ideas", (_request, response) =>
+    response.json({ items: ideas }),
+  );
 
   return app;
 }
