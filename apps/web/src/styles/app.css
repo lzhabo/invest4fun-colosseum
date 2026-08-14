@@ -1458,6 +1458,128 @@
   margin-top: 28px;
   color: var(--coral);
 }
+.basket-dialog-layer {
+  position: fixed;
+  z-index: 30;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.basket-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(9, 10, 11, 0.58);
+}
+.basket-dialog {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: min(700px, 100%);
+  overflow: auto;
+  padding: 26px;
+  border: 2px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: 0 24px 60px rgba(9, 10, 11, 0.24);
+}
+.basket-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.basket-dialog-header h2 {
+  margin: 7px 0 5px;
+  font: 32px / 1 var(--font-brand);
+}
+.basket-dialog-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.basket-dialog-close,
+.basket-dialog-item button {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.basket-dialog-close {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+}
+.basket-dialog-close svg {
+  width: 17px;
+  height: 17px;
+}
+.basket-dialog-list {
+  display: grid;
+  gap: 0;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+}
+.basket-dialog-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.basket-dialog-item > div {
+  display: grid;
+  gap: 4px;
+}
+.basket-dialog-item small {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.basket-dialog-item button {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+}
+.basket-dialog-item svg {
+  width: 15px;
+  height: 15px;
+}
+.basket-dialog-empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  padding: 30px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+.basket-dialog-empty svg {
+  width: 26px;
+  height: 26px;
+  color: var(--blue);
+}
+.basket-dialog-empty strong {
+  color: var(--ink);
+}
+.basket-dialog-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+.basket-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 22px;
+  color: var(--muted);
+  font-size: 12px;
+}
 
 @media (max-width: 900px) {
   .topbar {
@@ -1678,6 +1800,16 @@
   }
   .account-dialog-header h2 {
     font-size: 25px;
+  }
+  .basket-dialog {
+    padding: 20px;
+  }
+  .basket-dialog-header h2 {
+    font-size: 26px;
+  }
+  .basket-dialog-footer {
+    align-items: stretch;
+    flex-direction: column;
   }
   .account-balance strong {
     font-size: 40px;

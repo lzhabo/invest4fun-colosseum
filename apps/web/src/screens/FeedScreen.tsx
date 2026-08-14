@@ -2,19 +2,19 @@ import type { FeedItem } from "@invest4fun/contracts";
 import { Check, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getFeed } from "../services/api";
+import { useBasket } from "../state/basket-context";
 
-type BasketSelection = { id: string; title: string; kind: "asset" };
 type Feedback = "invest" | "skip";
 
 export function FeedScreen() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<BasketSelection[]>([]);
   const [feedback, setFeedback] = useState<Feedback>();
   const [dragX, setDragX] = useState(0);
   const [error, setError] = useState(false);
   const pointerStart = useRef<{ id: number; x: number } | null>(null);
   const feedbackTimer = useRef<number | undefined>(undefined);
+  const basket = useBasket();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -37,17 +37,10 @@ export function FeedScreen() {
   );
 
   const active = feed[index];
-  const addToBasket = (item: FeedItem) => {
-    setSelected((current) =>
-      current.some((selection) => selection.id === item.id)
-        ? current
-        : [...current, { id: item.id, title: item.name, kind: "asset" }],
-    );
-  };
-
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
-    if (invest) addToBasket(active);
+    if (invest)
+      basket.add({ id: active.id, title: active.name, kind: "asset" });
     setFeedback(invest ? "invest" : "skip");
     feedbackTimer.current = window.setTimeout(() => {
       setIndex((current) => current + 1);
@@ -238,14 +231,15 @@ export function FeedScreen() {
             <Check aria-hidden="true" />
             <h2>Feed reviewed.</h2>
             <p>
-              {selected.length
-                ? `${selected.length} asset${selected.length === 1 ? "" : "s"} ready for your basket.`
+              {basket.count
+                ? `${basket.count} selection${basket.count === 1 ? "" : "s"} ready for your basket.`
                 : "Your basket is still empty."}
             </p>
             <button
               type="button"
               className="legacy-primary-button"
-              disabled={!selected.length}
+              disabled={!basket.count}
+              onClick={basket.open}
             >
               <Plus aria-hidden="true" /> Review basket
             </button>
@@ -256,15 +250,16 @@ export function FeedScreen() {
           <div>
             <span>Basket</span>
             <strong>
-              {selected.length
-                ? `${selected.length} assets selected`
+              {basket.count
+                ? `${basket.count} selections ready`
                 : "Your basket is empty"}
             </strong>
           </div>
           <button
             type="button"
             className="legacy-primary-button"
-            disabled={!selected.length}
+            disabled={!basket.count}
+            onClick={basket.open}
           >
             Review basket <Plus aria-hidden="true" />
           </button>

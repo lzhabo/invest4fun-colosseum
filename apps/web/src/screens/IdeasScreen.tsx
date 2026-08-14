@@ -2,18 +2,19 @@ import type { Idea } from "@invest4fun/contracts";
 import { Check, ChevronLeft, ChevronRight, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getIdeas } from "../services/api";
+import { useBasket } from "../state/basket-context";
 
 type Feedback = "invest" | "skip";
 
 export function IdeasScreen() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<Feedback>();
   const [dragX, setDragX] = useState(0);
   const [error, setError] = useState(false);
   const pointerStart = useRef<{ id: number; x: number } | null>(null);
   const feedbackTimer = useRef<number | undefined>(undefined);
+  const basket = useBasket();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -39,9 +40,7 @@ export function IdeasScreen() {
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
     if (invest) {
-      setSelected((current) =>
-        current.includes(active.id) ? current : [...current, active.id],
-      );
+      basket.add({ id: active.id, title: active.title, kind: "idea" });
     }
     setFeedback(invest ? "invest" : "skip");
     feedbackTimer.current = window.setTimeout(() => {
@@ -209,14 +208,15 @@ export function IdeasScreen() {
             <Check aria-hidden="true" />
             <h2>Ideas reviewed.</h2>
             <p>
-              {selected.length
-                ? `${selected.length} idea${selected.length === 1 ? "" : "s"} ready for your basket.`
+              {basket.count
+                ? `${basket.count} selection${basket.count === 1 ? "" : "s"} ready for your basket.`
                 : "Your basket is still empty."}
             </p>
             <button
               type="button"
               className="legacy-primary-button"
-              disabled={!selected.length}
+              disabled={!basket.count}
+              onClick={basket.open}
             >
               Review basket
             </button>
@@ -227,15 +227,16 @@ export function IdeasScreen() {
           <div>
             <span>Basket</span>
             <strong>
-              {selected.length
-                ? `${selected.length} ideas selected`
+              {basket.count
+                ? `${basket.count} selections ready`
                 : "Your basket is empty"}
             </strong>
           </div>
           <button
             type="button"
             className="legacy-primary-button"
-            disabled={!selected.length}
+            disabled={!basket.count}
+            onClick={basket.open}
           >
             Review basket <ChevronRight aria-hidden="true" />
           </button>
