@@ -1,4 +1,9 @@
 import type { FeedItem, Idea } from "@invest4fun/contracts";
+import { CuratedCatalogProvider } from "./providers/catalog-provider.js";
+import {
+  CoinGeckoMarketDataProvider,
+  EnrichedCatalogProvider,
+} from "./providers/market-data-provider.js";
 
 const baseAsset = {
   chain: "solana" as const,
@@ -10,6 +15,7 @@ const solana: FeedItem = {
   ...baseAsset,
   id: "solana",
   mint: "So11111111111111111111111111111111111111112",
+  coingeckoId: "solana",
   symbol: "SOL",
   name: "Solana",
   assetType: "token",
@@ -21,6 +27,7 @@ const usdc: FeedItem = {
   ...baseAsset,
   id: "usdc",
   mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  coingeckoId: "usd-coin",
   symbol: "USDC",
   name: "USD Coin",
   assetType: "token",
@@ -41,6 +48,17 @@ const climateGrowth: FeedItem = {
 };
 
 export const feedItems: FeedItem[] = [solana, usdc, climateGrowth];
+
+export const feedCatalog = new CuratedCatalogProvider(feedItems);
+
+export function createFeedCatalog(coingeckoApiKey?: string) {
+  const curated = new CuratedCatalogProvider(feedItems);
+  if (!coingeckoApiKey) return curated;
+  return new EnrichedCatalogProvider(
+    curated,
+    new CoinGeckoMarketDataProvider(coingeckoApiKey),
+  );
+}
 
 export const ideas: Idea[] = [
   {

@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { AppShell, type AppView } from "../components/layout/AppShell";
 import { AccountScreen } from "../screens/AccountScreen";
-import { ActivityScreen } from "../screens/ActivityScreen";
 import { FeedScreen } from "../screens/FeedScreen";
+import { IdeasScreen } from "../screens/IdeasScreen";
 import { PortfolioScreen } from "../screens/PortfolioScreen";
 import { useServiceHealth } from "./use-service-health";
 
 const screens: Record<AppView, React.ComponentType> = {
   feed: FeedScreen,
+  ideas: IdeasScreen,
   portfolio: PortfolioScreen,
-  activity: ActivityScreen,
   account: AccountScreen,
 };
 

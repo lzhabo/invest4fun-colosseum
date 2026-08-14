@@ -9,6 +9,7 @@ const schema = z.object({
     .string()
     .min(1)
     .default("postgresql://invest4fun:invest4fun@localhost:5432/invest4fun"),
+  COINGECKO_API_KEY: z.string().min(1).optional(),
 });
 
 export type ApiConfig = z.infer<typeof schema>;

@@ -1,8 +1,8 @@
 import {
-  Activity,
+  BriefcaseBusiness,
   CircleUserRound,
   GalleryVerticalEnd,
-  PieChart,
+  Lightbulb,
   Wallet,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -10,14 +10,18 @@ import type { ServiceStatus } from "../../app/use-service-health";
 import { useAuth } from "../../auth/auth-context";
 import { WalletMenu } from "./WalletMenu";
 
-export type AppView = "feed" | "portfolio" | "activity" | "account";
+export type AppView = "feed" | "ideas" | "portfolio" | "account";
 
 const navigation = [
   { id: "feed", label: "Feed", Icon: GalleryVerticalEnd },
-  { id: "portfolio", label: "Portfolio", Icon: PieChart },
-  { id: "activity", label: "Activity", Icon: Activity },
+  { id: "ideas", label: "Ideas", Icon: Lightbulb },
+  { id: "portfolio", label: "Portfolio", Icon: BriefcaseBusiness },
   { id: "account", label: "Account", Icon: CircleUserRound },
-] satisfies Array<{ id: AppView; label: string; Icon: typeof Activity }>;
+] satisfies Array<{
+  id: AppView;
+  label: string;
+  Icon: typeof BriefcaseBusiness;
+}>;
 
 export function AppShell({
   activeView,

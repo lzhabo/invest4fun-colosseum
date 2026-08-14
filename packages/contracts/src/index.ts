@@ -26,6 +26,11 @@ export const assetSchema = z.object({
   assetType: z.enum(["token", "stock"]),
   rationale: z.string().min(1),
   riskLabel: z.enum(["lower", "medium", "higher"]),
+  coingeckoId: z.string().min(1).nullable().optional(),
+  priceUsd: z.number().nonnegative().nullable().optional(),
+  marketCapUsd: z.number().nonnegative().nullable().optional(),
+  volume24hUsd: z.number().nonnegative().nullable().optional(),
+  priceChange24hPct: z.number().nullable().optional(),
 });
 
 export const feedItemSchema = assetSchema.extend({

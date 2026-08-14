@@ -5,9 +5,13 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { bootstrapAccount } from "./account-bootstrap.js";
-import { feedItems, ideas } from "./catalog.js";
+import { feedCatalog, ideas } from "./catalog.js";
+import type { FeedCatalogProvider } from "./providers/catalog-provider.js";
 
-export function createApp(database: Database) {
+export function createApp(
+  database: Database,
+  catalogProvider: FeedCatalogProvider = feedCatalog,
+) {
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
@@ -52,15 +56,23 @@ export function createApp(database: Database) {
     }
   });
 
-  app.get("/api/feed", (_request, response) => {
+  app.get("/api/feed", async (_request, response) => {
     const generatedAt = new Date();
     const expiresAt = new Date(generatedAt.getTime() + 60_000);
-    response.json({
-      sessionId: randomUUID(),
-      generatedAt: generatedAt.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      items: feedItems,
-    });
+    try {
+      const items = await catalogProvider.getItems();
+      response.json({
+        sessionId: randomUUID(),
+        generatedAt: generatedAt.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        items,
+      });
+    } catch {
+      response.status(503).json({
+        error: "FEED_CATALOG_UNAVAILABLE",
+        message: "The Feed catalog is temporarily unavailable.",
+      });
+    }
   });
   app.get("/api/ideas", (_request, response) =>
     response.json({ items: ideas }),
