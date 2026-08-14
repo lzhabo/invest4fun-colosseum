@@ -1,18 +1,37 @@
 import {
+  ArrowDownToLine,
+  Check,
   CircleUserRound,
+  Coins,
   Copy,
   ExternalLink,
+  Info,
   LogOut,
   Wallet,
+  X,
 } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "../auth/auth-context";
 import { EmptyState } from "../components/ui/EmptyState";
 
 export function AccountScreen() {
   const auth = useAuth();
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+
+  async function copyAddress(address: string) {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      window.setTimeout(() => setCopiedAddress(null), 1600);
+    } catch {
+      setCopiedAddress(null);
+    }
+  }
 
   if (auth.authenticated) {
     const email = auth.user?.email?.address;
+    const primaryWallet = auth.wallets[0];
     return (
       <main className="legacy-page account-page">
         <header className="account-heading">
@@ -29,10 +48,109 @@ export function AccountScreen() {
             </small>
           </div>
           <div className="account-address">
-            <span>Connected through Privy</span>
-            <strong>{email ?? "Invest4Fun user"}</strong>
+            <div>
+              <span>Connected through Privy</span>
+              <strong>{email ?? "Invest4Fun user"}</strong>
+            </div>
+            <button
+              type="button"
+              className="legacy-primary-button account-top-up-trigger"
+              onClick={() => setTopUpOpen(true)}
+            >
+              Top up <ArrowDownToLine aria-hidden="true" />
+            </button>
           </div>
         </section>
+        {topUpOpen ? (
+          <div className="account-dialog-layer" role="presentation">
+            <button
+              type="button"
+              className="account-dialog-backdrop"
+              aria-label="Close top up dialog"
+              onClick={() => setTopUpOpen(false)}
+            />
+            <section
+              className="account-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="top-up-title"
+            >
+              <header className="account-dialog-header">
+                <div>
+                  <span className="account-label">Funding</span>
+                  <h2 id="top-up-title">Top up your wallet</h2>
+                  <p>Choose how you want to add funds to Invest4Fun.</p>
+                </div>
+                <button
+                  type="button"
+                  className="account-dialog-close"
+                  aria-label="Close top up dialog"
+                  onClick={() => setTopUpOpen(false)}
+                >
+                  <X aria-hidden="true" />
+                </button>
+              </header>
+              <div className="account-top-up-providers">
+                <article className="account-top-up-provider">
+                  <div className="account-top-up-provider-heading">
+                    <span className="account-top-up-provider-icon">
+                      <Coins aria-hidden="true" />
+                    </span>
+                    <div>
+                      <strong>Direct crypto transfer</strong>
+                      <small>
+                        Send USDC on Solana to your Invest4Fun wallet.
+                      </small>
+                    </div>
+                  </div>
+                  {primaryWallet ? (
+                    <div className="account-top-up-wallet">
+                      <span>Deposit address</span>
+                      <code>{primaryWallet.address}</code>
+                      <button
+                        type="button"
+                        className="legacy-primary-button account-top-up-copy"
+                        onClick={() => void copyAddress(primaryWallet.address)}
+                      >
+                        {copiedAddress === primaryWallet.address ? (
+                          <>
+                            Copied <Check aria-hidden="true" />
+                          </>
+                        ) : (
+                          <>
+                            Copy address <Copy aria-hidden="true" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+                <article className="account-top-up-provider account-top-up-provider-muted">
+                  <div className="account-top-up-provider-heading">
+                    <span className="account-top-up-provider-icon">
+                      <Wallet aria-hidden="true" />
+                    </span>
+                    <div>
+                      <strong>Card or bank transfer</strong>
+                      <small>
+                        Country-specific on-ramp providers will be connected
+                        here.
+                      </small>
+                    </div>
+                  </div>
+                  <span className="account-provider-status">Coming next</span>
+                </article>
+              </div>
+              <p className="account-top-up-note">
+                <Info aria-hidden="true" />
+                <span>
+                  Only send supported assets on Solana. Keep some SOL in the
+                  wallet for network fees.
+                </span>
+              </p>
+            </section>
+          </div>
+        ) : null}
         <section className="account-command-section">
           <h2>Wallets</h2>
           <div className="account-wallet-list">
@@ -63,8 +181,9 @@ export function AccountScreen() {
                       type="button"
                       title="Copy wallet address"
                       aria-label="Copy wallet address"
+                      onClick={() => void copyAddress(wallet.address)}
                     >
-                      <Copy />
+                      {copiedAddress === wallet.address ? <Check /> : <Copy />}
                     </button>
                     <a
                       href={`https://explorer.solana.com/address/${wallet.address}`}
