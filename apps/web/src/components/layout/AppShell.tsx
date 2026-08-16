@@ -158,8 +158,11 @@ export function AppShell({
             <header className="basket-dialog-header">
               <div>
                 <span className="eyebrow">Purchase draft</span>
-                <h2 id="basket-dialog-title">Your basket</h2>
-                <p>Review your selections before we prepare the purchase.</p>
+                <h2 id="basket-dialog-title">Review your basket</h2>
+                <p>
+                  Review your selections before we refresh quotes and prepare
+                  the purchase.
+                </p>
               </div>
               <button
                 type="button"
@@ -170,73 +173,130 @@ export function AppShell({
                 <X aria-hidden="true" />
               </button>
             </header>
-            {basket.entries.length ? (
-              <div className="basket-dialog-list">
-                {basket.entries.map((entry) => (
-                  <div className="basket-dialog-item" key={entry.id}>
-                    <div>
-                      <strong>{entry.title}</strong>
-                      <small>{entry.kind === "idea" ? "Idea" : "Asset"}</small>
+            <div className="basket-review-grid">
+              <div className="basket-review-main">
+                {basket.entries.length ? (
+                  <div className="basket-dialog-list">
+                    <div className="basket-list-labels">
+                      <span>Selection</span>
+                      <span>Input (you pay)</span>
                     </div>
-                    <label className="basket-amount-field">
-                      <span className="sr-only">Amount for {entry.title}</span>
-                      <b>$</b>
-                      <input
-                        type="number"
-                        min="0.1"
-                        step="0.01"
-                        inputMode="decimal"
-                        value={
-                          Number.isFinite(entry.amountUsd)
-                            ? entry.amountUsd
-                            : ""
-                        }
-                        onChange={(event) =>
-                          basket.updateAmount(
-                            entry.id,
-                            Number(event.target.value),
-                          )
-                        }
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${entry.title} from basket`}
-                      title="Remove from basket"
-                      onClick={() => basket.remove(entry.id)}
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </button>
+                    {basket.entries.map((entry) => (
+                      <div className="basket-dialog-item" key={entry.id}>
+                        <div>
+                          <strong>{entry.title}</strong>
+                          <small>
+                            {entry.kind === "idea"
+                              ? "Prepared idea"
+                              : "Direct asset"}
+                          </small>
+                        </div>
+                        <label className="basket-amount-field">
+                          <span className="sr-only">
+                            Amount for {entry.title}
+                          </span>
+                          <b>$</b>
+                          <input
+                            type="number"
+                            min="0.1"
+                            step="0.01"
+                            inputMode="decimal"
+                            value={
+                              Number.isFinite(entry.amountUsd)
+                                ? entry.amountUsd
+                                : ""
+                            }
+                            onChange={(event) =>
+                              basket.updateAmount(
+                                entry.id,
+                                Number(event.target.value),
+                              )
+                            }
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          aria-label={`Remove ${entry.title} from basket`}
+                          title="Remove from basket"
+                          onClick={() => basket.remove(entry.id)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <div className="basket-dialog-empty">
+                    <ShoppingBasket aria-hidden="true" />
+                    <strong>Your basket is empty</strong>
+                    <p>Add assets or ideas from Feed and Ideas.</p>
+                  </div>
+                )}
+                {basket.entries.length ? (
+                  <div className="basket-dialog-total">
+                    <div>
+                      <span>Total input</span>
+                      <small>USDC to invest</small>
+                    </div>
+                    <strong>${basketTotal.toFixed(2)}</strong>
+                  </div>
+                ) : null}
+                {prepared ? (
+                  <p className="basket-prepared-note" role="status">
+                    Draft order prepared on the server. Wallet signing will be
+                    connected in the Jupiter execution phase.
+                  </p>
+                ) : prepareError ? (
+                  <p className="basket-validation-note" role="alert">
+                    {prepareError}
+                  </p>
+                ) : !basketIsValid && basket.count ? (
+                  <p className="basket-validation-note" role="alert">
+                    Each selection must have an amount of at least $0.10.
+                  </p>
+                ) : null}
               </div>
-            ) : (
-              <div className="basket-dialog-empty">
-                <ShoppingBasket aria-hidden="true" />
-                <strong>Your basket is empty</strong>
-                <p>Add assets or ideas from Feed and Ideas.</p>
-              </div>
-            )}
-            {basket.entries.length ? (
-              <div className="basket-dialog-total">
-                <span>Total planned investment</span>
-                <strong>${basketTotal.toFixed(2)}</strong>
-              </div>
-            ) : null}
-            {prepared ? (
-              <p className="basket-prepared-note" role="status">
-                Draft order prepared on the server. Wallet signing will be
-                connected in the Jupiter execution phase.
-              </p>
-            ) : prepareError ? (
-              <p className="basket-validation-note" role="alert">
-                {prepareError}
-              </p>
-            ) : !basketIsValid && basket.count ? (
-              <p className="basket-validation-note" role="alert">
-                Each selection must have an amount of at least $0.10.
-              </p>
-            ) : null}
+              <aside className="basket-policy-rail">
+                <h3>Policy checks</h3>
+                <div className="basket-policy-row">
+                  <span className="policy-check">✓</span>
+                  <b>Assets eligible</b>
+                  <em>
+                    {basket.count
+                      ? `${basket.count} / ${basket.count}`
+                      : "None selected"}
+                  </em>
+                </div>
+                <div className="basket-policy-row">
+                  <span
+                    className={
+                      basketIsValid ? "policy-check" : "policy-warning"
+                    }
+                  >
+                    {basketIsValid ? "✓" : "!"}
+                  </span>
+                  <b>Budget within limit</b>
+                  <em>${basketTotal.toFixed(2)} / $100.00 USDC</em>
+                </div>
+                <div className="basket-policy-row">
+                  <span className="policy-check">✓</span>
+                  <b>Execution provider</b>
+                  <em>Jupiter</em>
+                </div>
+                <div className="basket-policy-row">
+                  <span className="policy-check">✓</span>
+                  <b>Network</b>
+                  <em>Solana</em>
+                </div>
+                <div className="basket-policy-note">
+                  <strong>Review before signing</strong>
+                  <p>
+                    Quotes and final outputs will be refreshed before a
+                    transaction is prepared.
+                  </p>
+                </div>
+              </aside>
+            </div>
             <footer className="basket-dialog-footer">
               <span>
                 {basket.count} selection{basket.count === 1 ? "" : "s"}
