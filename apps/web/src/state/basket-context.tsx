@@ -4,6 +4,7 @@ export type BasketEntry = {
   id: string;
   title: string;
   kind: "asset" | "idea";
+  amountUsd: number;
 };
 
 type BasketContextValue = {
@@ -11,6 +12,7 @@ type BasketContextValue = {
   count: number;
   isOpen: boolean;
   add: (entry: BasketEntry) => void;
+  updateAmount: (id: string, amountUsd: number) => void;
   remove: (id: string) => void;
   clear: () => void;
   open: () => void;
@@ -26,7 +28,10 @@ function readStoredBasket(): BasketEntry[] {
     if (!stored) return [];
     const value: unknown = JSON.parse(stored);
     if (!Array.isArray(value)) return [];
-    return value.filter(isBasketEntry);
+    return value.filter(isBasketEntry).map((entry) => ({
+      ...entry,
+      amountUsd: entry.amountUsd ?? 50,
+    }));
   } catch {
     return [];
   }
@@ -38,7 +43,8 @@ function isBasketEntry(value: unknown): value is BasketEntry {
   return (
     typeof entry.id === "string" &&
     typeof entry.title === "string" &&
-    (entry.kind === "asset" || entry.kind === "idea")
+    (entry.kind === "asset" || entry.kind === "idea") &&
+    (typeof entry.amountUsd === "number" || entry.amountUsd === undefined)
   );
 }
 
@@ -59,7 +65,13 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
         setEntries((current) =>
           current.some((item) => item.id === entry.id)
             ? current
-            : [...current, entry],
+            : [...current, { ...entry, amountUsd: entry.amountUsd ?? 50 }],
+        ),
+      updateAmount: (id, amountUsd) =>
+        setEntries((current) =>
+          current.map((entry) =>
+            entry.id === id ? { ...entry, amountUsd } : entry,
+          ),
         ),
       remove: (id) =>
         setEntries((current) => current.filter((entry) => entry.id !== id)),

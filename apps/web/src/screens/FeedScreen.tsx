@@ -40,7 +40,12 @@ export function FeedScreen() {
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
     if (invest)
-      basket.add({ id: active.id, title: active.name, kind: "asset" });
+      basket.add({
+        id: active.id,
+        title: active.name,
+        kind: "asset",
+        amountUsd: 50,
+      });
     setFeedback(invest ? "invest" : "skip");
     feedbackTimer.current = window.setTimeout(() => {
       setIndex((current) => current + 1);

@@ -40,7 +40,12 @@ export function IdeasScreen() {
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
     if (invest) {
-      basket.add({ id: active.id, title: active.title, kind: "idea" });
+      basket.add({
+        id: active.id,
+        title: active.title,
+        kind: "idea",
+        amountUsd: 50,
+      });
     }
     setFeedback(invest ? "invest" : "skip");
     feedbackTimer.current = window.setTimeout(() => {

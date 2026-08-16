@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useState } from "react";
 import type { ServiceStatus } from "../../app/use-service-health";
 import { useAuth } from "../../auth/auth-context";
 import { useBasket } from "../../state/basket-context";
@@ -40,6 +41,16 @@ export function AppShell({
 }) {
   const auth = useAuth();
   const basket = useBasket();
+  const [prepared, setPrepared] = useState(false);
+  const basketTotal = basket.entries.reduce(
+    (total, entry) => total + (entry.amountUsd ?? 0),
+    0,
+  );
+  const basketIsValid =
+    basket.count > 0 &&
+    basket.entries.every(
+      (entry) => Number.isFinite(entry.amountUsd) && entry.amountUsd >= 0.1,
+    );
 
   return (
     <div className="app-shell">
@@ -140,6 +151,27 @@ export function AppShell({
                       <strong>{entry.title}</strong>
                       <small>{entry.kind === "idea" ? "Idea" : "Asset"}</small>
                     </div>
+                    <label className="basket-amount-field">
+                      <span className="sr-only">Amount for {entry.title}</span>
+                      <b>$</b>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={
+                          Number.isFinite(entry.amountUsd)
+                            ? entry.amountUsd
+                            : ""
+                        }
+                        onChange={(event) =>
+                          basket.updateAmount(
+                            entry.id,
+                            Number(event.target.value),
+                          )
+                        }
+                      />
+                    </label>
                     <button
                       type="button"
                       aria-label={`Remove ${entry.title} from basket`}
@@ -158,6 +190,22 @@ export function AppShell({
                 <p>Add assets or ideas from Feed and Ideas.</p>
               </div>
             )}
+            {basket.entries.length ? (
+              <div className="basket-dialog-total">
+                <span>Total planned investment</span>
+                <strong>${basketTotal.toFixed(2)}</strong>
+              </div>
+            ) : null}
+            {prepared ? (
+              <p className="basket-prepared-note" role="status">
+                Draft order prepared locally. Wallet signing will be connected
+                in the Jupiter execution phase.
+              </p>
+            ) : !basketIsValid && basket.count ? (
+              <p className="basket-validation-note" role="alert">
+                Each selection must have an amount of at least $0.10.
+              </p>
+            ) : null}
             <footer className="basket-dialog-footer">
               <span>
                 {basket.count} selection{basket.count === 1 ? "" : "s"}
@@ -165,8 +213,9 @@ export function AppShell({
               <button
                 type="button"
                 className="legacy-primary-button"
-                disabled={!basket.count}
+                disabled={!basketIsValid}
                 title="Purchase flow is not connected yet"
+                onClick={() => setPrepared(true)}
               >
                 Prepare purchase
               </button>
