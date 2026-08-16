@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { createDatabase } from "@invest4fun/database";
 import { config as loadEnvironment } from "dotenv";
 import { createApp } from "./app.js";
@@ -5,8 +6,13 @@ import { createFeedCatalog } from "./catalog.js";
 import { loadConfig } from "./config.js";
 import { CoinGeckoMarketDataProvider } from "./providers/market-data-provider.js";
 
-loadEnvironment({ path: ".env.local" });
-loadEnvironment({ path: ".env" });
+loadEnvironment({
+  path: fileURLToPath(new URL("../../../.env.local", import.meta.url)),
+  override: true,
+});
+loadEnvironment({
+  path: fileURLToPath(new URL("../../../.env", import.meta.url)),
+});
 
 const config = loadConfig();
 const database = createDatabase(config.DATABASE_URL);
