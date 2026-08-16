@@ -60,12 +60,27 @@ export const feedResponseSchema = z.object({
   expiresAt: z.string().datetime(),
   items: z.array(feedItemSchema),
 });
+export const marketChartPeriodSchema = z.enum(["1", "7", "30", "365", "max"]);
+export const marketChartResponseSchema = z.object({
+  assetId: z.string().min(1),
+  period: marketChartPeriodSchema,
+  source: z.literal("coingecko"),
+  updatedAt: z.string().datetime(),
+  points: z.array(
+    z.object({
+      timestamp: z.string().datetime(),
+      priceUsd: z.number().nonnegative(),
+    }),
+  ),
+});
 export const ideasResponseSchema = z.object({ items: z.array(ideaSchema) });
 
 export type Asset = z.infer<typeof assetSchema>;
 export type FeedItem = z.infer<typeof feedItemSchema>;
 export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
+export type MarketChartPeriod = z.infer<typeof marketChartPeriodSchema>;
+export type MarketChartResponse = z.infer<typeof marketChartResponseSchema>;
 export type IdeasResponse = z.infer<typeof ideasResponseSchema>;
 
 export const basketEntryRequestSchema = z.object({

@@ -1,4 +1,8 @@
-import type { FeedItem } from "@invest4fun/contracts";
+import type {
+  FeedItem,
+  MarketChartPeriod,
+  MarketChartResponse,
+} from "@invest4fun/contracts";
 import {
   BaggageClaim,
   Check,
@@ -11,7 +15,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { BasketRail } from "../components/basket/BasketRail";
-import { getFeed } from "../services/api";
+import { getFeed, getMarketChart } from "../services/api";
 import { useBasket } from "../state/basket-context";
 
 const FeedPage = styled.main`
@@ -203,6 +207,14 @@ const PriceChart = styled.div<{ $isDown: boolean }>`
   .mock-price-chart {
     color: ${({ $isDown }) => ($isDown ? "var(--coral)" : "var(--success)")};
   }
+
+  .chart-empty {
+    display: grid;
+    min-height: 190px;
+    place-items: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
 `;
 
 const ChartPeriodButton = styled.button<{ $selected: boolean }>`
@@ -229,17 +241,43 @@ const RiskLabel = styled.span<{ $risk: FeedItem["riskLabel"] }>`
         : "var(--success)"};
 `;
 
+function chartPoints(chart: MarketChartResponse) {
+  const prices = chart.points.map((point) => point.priceUsd);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const range = max - min || Math.max(max * 0.02, 0.01);
+
+  return chart.points
+    .map((point, index) => {
+      const x = (index / Math.max(chart.points.length - 1, 1)) * 640;
+      const y = 210 - ((point.priceUsd - min) / range) * 170;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}
+
+function chartDateLabel(timestamp: string) {
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(timestamp));
+}
+
 export function FeedScreen() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [ticketAmount, setTicketAmount] = useState(10);
+  const [chartPeriod, setChartPeriod] = useState<MarketChartPeriod>("30");
+  const [chart, setChart] = useState<MarketChartResponse | null>(null);
+  const [chartLoading, setChartLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>();
   const [dragX, setDragX] = useState(0);
   const [error, setError] = useState(false);
   const pointerStart = useRef<{ id: number; x: number } | null>(null);
   const feedbackTimer = useRef<number | undefined>(undefined);
   const basket = useBasket();
+  const active = feed[index];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -254,6 +292,27 @@ export function FeedScreen() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    if (!active?.coingeckoId) {
+      setChart(null);
+      setChartLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setChart(null);
+    setChartLoading(true);
+    getMarketChart(active.id, chartPeriod, controller.signal)
+      .then(setChart)
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === "AbortError")
+          return;
+        setChart(null);
+      })
+      .finally(() => setChartLoading(false));
+    return () => controller.abort();
+  }, [active?.id, active?.coingeckoId, chartPeriod]);
+
   useEffect(
     () => () => {
       if (feedbackTimer.current !== undefined)
@@ -262,7 +321,6 @@ export function FeedScreen() {
     [],
   );
 
-  const active = feed[index];
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
     if (invest)
@@ -439,42 +497,67 @@ export function FeedScreen() {
                       </span>
                       <small>{active.marketDataSource}</small>
                     </div>
-                    <svg
-                      className="mock-price-chart"
-                      viewBox="0 0 640 260"
-                      role="img"
-                      aria-label="Mock one month price chart"
-                    >
-                      {[38, 92, 146, 200].map((y) => (
-                        <line
-                          key={y}
-                          className="chart-gridline"
-                          x1="0"
-                          x2="640"
-                          y1={y}
-                          y2={y}
+                    {chartLoading ? (
+                      <div className="chart-empty">Loading chart...</div>
+                    ) : chart?.points.length ? (
+                      <svg
+                        className="mock-price-chart"
+                        viewBox="0 0 640 260"
+                        role="img"
+                        aria-label={`${active.name} price chart`}
+                      >
+                        {[38, 92, 146, 200].map((y) => (
+                          <line
+                            key={y}
+                            className="chart-gridline"
+                            x1="0"
+                            x2="640"
+                            y1={y}
+                            y2={y}
+                          />
+                        ))}
+                        <polygon
+                          points={`${chartPoints(chart)} 640,230 0,230`}
                         />
-                      ))}
-                      <polygon points="0,86 28,124 55,101 83,137 111,89 140,116 168,72 196,142 224,132 252,171 280,158 308,203 336,183 364,190 392,148 420,165 448,126 476,151 504,119 532,132 560,103 588,120 616,90 640,104 640,230 0,230" />
-                      <polyline points="0,86 28,124 55,101 83,137 111,89 140,116 168,72 196,142 224,132 252,171 280,158 308,203 336,183 364,190 392,148 420,165 448,126 476,151 504,119 532,132 560,103 588,120 616,90 640,104" />
-                    </svg>
+                        <polyline points={chartPoints(chart)} />
+                      </svg>
+                    ) : (
+                      <div className="chart-empty">
+                        Historical data unavailable
+                      </div>
+                    )}
                     <div className="chart-axis-labels">
-                      <span>Jul 17</span>
-                      <span>Aug 16</span>
+                      <span>
+                        {chart?.points[0]
+                          ? chartDateLabel(chart.points[0].timestamp)
+                          : ""}
+                      </span>
+                      <span>
+                        {chart?.points.at(-1)
+                          ? chartDateLabel(chart.points.at(-1)!.timestamp)
+                          : ""}
+                      </span>
                     </div>
                     <div className="chart-controls">
-                      {(["1D", "1W", "1M", "1Y", "All"] as const).map(
-                        (period) => (
+                      {(
+                        [
+                          ["1D", "1"],
+                          ["1W", "7"],
+                          ["1M", "30"],
+                          ["1Y", "365"],
+                          ["All", "max"],
+                        ] as const
+                      ).map(([label, period]) => (
                           <ChartPeriodButton
-                            key={period}
+                            key={label}
                             type="button"
-                            $selected={period === "1M"}
-                            aria-pressed={period === "1M"}
+                            $selected={chartPeriod === period}
+                            aria-pressed={chartPeriod === period}
+                            onClick={() => setChartPeriod(period)}
                           >
-                            {period}
+                            {label}
                           </ChartPeriodButton>
-                        ),
-                      )}
+                        ))}
                       <button
                         type="button"
                         className="chart-help"

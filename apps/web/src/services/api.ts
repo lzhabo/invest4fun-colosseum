@@ -8,6 +8,9 @@ import {
   healthResponseSchema,
   type IdeasResponse,
   ideasResponseSchema,
+  type MarketChartPeriod,
+  type MarketChartResponse,
+  marketChartResponseSchema,
 } from "@invest4fun/contracts";
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
@@ -32,6 +35,18 @@ export function getFeed(signal?: AbortSignal): Promise<FeedResponse> {
 
 export function getIdeas(signal?: AbortSignal): Promise<IdeasResponse> {
   return getJson("/api/ideas", ideasResponseSchema.parse, signal);
+}
+
+export function getMarketChart(
+  assetId: string,
+  period: MarketChartPeriod,
+  signal?: AbortSignal,
+): Promise<MarketChartResponse> {
+  return getJson(
+    `/api/feed/${encodeURIComponent(assetId)}/chart?days=${period}`,
+    marketChartResponseSchema.parse,
+    signal,
+  );
 }
 
 export async function reviewBasket(

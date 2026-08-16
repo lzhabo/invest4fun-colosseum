@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { basketReviewRequestSchema } from "@invest4fun/contracts";
+import {
+  basketReviewRequestSchema,
+  marketChartPeriodSchema,
+} from "@invest4fun/contracts";
 import type { Database } from "@invest4fun/database";
 import { PrivyClient } from "@privy-io/node";
 import express from "express";
@@ -8,10 +11,12 @@ import helmet from "helmet";
 import { bootstrapAccount } from "./account-bootstrap.js";
 import { feedCatalog, feedItems, ideas } from "./catalog.js";
 import type { FeedCatalogProvider } from "./providers/catalog-provider.js";
+import type { MarketChartProvider } from "./providers/market-data-provider.js";
 
 export function createApp(
   database: Database,
   catalogProvider: FeedCatalogProvider = feedCatalog,
+  chartProvider?: MarketChartProvider,
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -73,6 +78,27 @@ export function createApp(
         error: "FEED_CATALOG_UNAVAILABLE",
         message: "The Feed catalog is temporarily unavailable.",
       });
+    }
+  });
+  app.get("/api/feed/:assetId/chart", async (request, response) => {
+    if (!chartProvider) {
+      response.status(503).json({ error: "MARKET_CHART_UNAVAILABLE" });
+      return;
+    }
+
+    const asset = feedItems.find((item) => item.id === request.params.assetId);
+    const period = marketChartPeriodSchema.safeParse(request.query.days ?? "30");
+    if (!asset?.coingeckoId || !period.success) {
+      response.status(404).json({ error: "MARKET_CHART_NOT_FOUND" });
+      return;
+    }
+
+    try {
+      response.json(
+        await chartProvider.getHistory(asset.coingeckoId, period.data),
+      );
+    } catch {
+      response.status(503).json({ error: "MARKET_CHART_UNAVAILABLE" });
     }
   });
   app.get("/api/ideas", (_request, response) =>

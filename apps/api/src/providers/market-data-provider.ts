@@ -1,4 +1,8 @@
-import type { FeedItem } from "@invest4fun/contracts";
+import type {
+  FeedItem,
+  MarketChartPeriod,
+  MarketChartResponse,
+} from "@invest4fun/contracts";
 import { z } from "zod";
 import type { FeedCatalogProvider } from "./catalog-provider.js";
 
@@ -15,6 +19,13 @@ const simplePriceSchema = z.record(
 
 export interface MarketDataProvider {
   enrich(items: FeedItem[]): Promise<FeedItem[]>;
+}
+
+export interface MarketChartProvider {
+  getHistory(
+    assetId: string,
+    period: MarketChartPeriod,
+  ): Promise<MarketChartResponse>;
 }
 
 export class CachedMarketDataProvider implements MarketDataProvider {
@@ -88,7 +99,13 @@ export class EnrichedCatalogProvider implements FeedCatalogProvider {
   }
 }
 
-export class CoinGeckoMarketDataProvider implements MarketDataProvider {
+const marketChartSchema = z.object({
+  prices: z.array(z.tuple([z.number(), z.number().nonnegative()])),
+});
+
+export class CoinGeckoMarketDataProvider
+  implements MarketDataProvider, MarketChartProvider
+{
   constructor(
     private readonly apiKey: string | undefined,
     private readonly fetcher: typeof fetch = fetch,
@@ -133,5 +150,35 @@ export class CoinGeckoMarketDataProvider implements MarketDataProvider {
         priceChange24hPct: snapshot.usd_24h_change ?? null,
       };
     });
+  }
+
+  async getHistory(assetId: string, period: MarketChartPeriod) {
+    const url = new URL(`${this.baseUrl}/coins/${assetId}/market_chart`);
+    url.searchParams.set("vs_currency", "usd");
+    url.searchParams.set("days", period);
+    if (period === "max") url.searchParams.set("interval", "daily");
+
+    const response = await this.fetcher(url, {
+      ...(this.apiKey ? { headers: { "x-cg-demo-api-key": this.apiKey } } : {}),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) throw new Error(`COINGECKO_CHART_${response.status}`);
+
+    const { prices } = marketChartSchema.parse(await response.json());
+    const step = Math.max(1, Math.ceil(prices.length / 240));
+    const points = prices
+      .filter((_, index) => index % step === 0)
+      .map(([timestamp, priceUsd]) => ({
+        timestamp: new Date(timestamp).toISOString(),
+        priceUsd,
+      }));
+
+    return {
+      assetId,
+      period,
+      source: "coingecko" as const,
+      updatedAt: new Date().toISOString(),
+      points,
+    };
   }
 }
