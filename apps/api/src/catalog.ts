@@ -63,7 +63,8 @@ const jupiter = token({
   coingeckoId: "jupiter-exchange-solana",
   symbol: "JUP",
   name: "Jupiter",
-  rationale: "The governance and ecosystem token of Solana's leading aggregator.",
+  rationale:
+    "The governance and ecosystem token of Solana's leading aggregator.",
   riskLabel: "higher",
 });
 const jitoSol = token({

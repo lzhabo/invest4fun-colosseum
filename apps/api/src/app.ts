@@ -87,7 +87,9 @@ export function createApp(
     }
 
     const asset = feedItems.find((item) => item.id === request.params.assetId);
-    const period = marketChartPeriodSchema.safeParse(request.query.days ?? "30");
+    const period = marketChartPeriodSchema.safeParse(
+      request.query.days ?? "30",
+    );
     if (!asset?.coingeckoId || !period.success) {
       response.status(404).json({ error: "MARKET_CHART_NOT_FOUND" });
       return;

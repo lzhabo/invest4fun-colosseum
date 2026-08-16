@@ -215,6 +215,35 @@ const PriceChart = styled.div<{ $isDown: boolean }>`
     color: var(--muted);
     font-size: 13px;
   }
+
+  .chart-plot {
+    position: relative;
+    min-height: 190px;
+    margin-top: 14px;
+    padding-right: 48px;
+  }
+
+  .chart-plot .mock-price-chart {
+    width: 100%;
+    height: 190px;
+    min-height: 0;
+    margin-top: 0;
+  }
+
+  .chart-prices {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2px 0 4px;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1;
+    text-align: right;
+  }
 `;
 
 const ChartPeriodButton = styled.button<{ $selected: boolean }>`
@@ -256,11 +285,36 @@ function chartPoints(chart: MarketChartResponse) {
     .join(" ");
 }
 
-function chartDateLabel(timestamp: string) {
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(timestamp));
+function chartPriceTicks(prices: number[]) {
+  if (!prices.length) return [];
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const interval = (max - min) / 3;
+  return Array.from({ length: 4 }, (_, index) => max - interval * index);
+}
+
+function formatChartAxisPrice(value: number) {
+  return `$${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value < 1 ? 6 : 2,
+  }).format(value)}`;
+}
+
+function chartDateLabel(timestamp: string, period: MarketChartPeriod) {
+  const date = new Date(timestamp);
+  if (period === "1") {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  }
+  return new Intl.DateTimeFormat(
+    "en-US",
+    period === "7" || period === "30"
+      ? { month: "short", day: "numeric" }
+      : { month: "short", year: "numeric" },
+  ).format(date);
 }
 
 export function FeedScreen() {
@@ -392,6 +446,15 @@ export function FeedScreen() {
     setTicketAmount(amount);
   }
 
+  const chartPrices = chart?.points.map((point) => point.priceUsd) ?? [];
+  const chartTicks = chartPriceTicks(chartPrices);
+  const chartFirst = chartPrices[0];
+  const chartLast = chartPrices.at(-1);
+  const chartChange =
+    chartFirst && chartLast
+      ? ((chartLast - chartFirst) / chartFirst) * 100
+      : null;
+
   if (error) {
     return (
       <FeedPage>
@@ -500,27 +563,34 @@ export function FeedScreen() {
                     {chartLoading ? (
                       <div className="chart-empty">Loading chart...</div>
                     ) : chart?.points.length ? (
-                      <svg
-                        className="mock-price-chart"
-                        viewBox="0 0 640 260"
-                        role="img"
-                        aria-label={`${active.name} price chart`}
-                      >
-                        {[38, 92, 146, 200].map((y) => (
-                          <line
-                            key={y}
-                            className="chart-gridline"
-                            x1="0"
-                            x2="640"
-                            y1={y}
-                            y2={y}
+                      <div className="chart-plot">
+                        <svg
+                          className="mock-price-chart"
+                          viewBox="0 0 640 260"
+                          role="img"
+                          aria-label={`${active.name} price chart`}
+                        >
+                          {[38, 92, 146, 200].map((y) => (
+                            <line
+                              key={y}
+                              className="chart-gridline"
+                              x1="0"
+                              x2="640"
+                              y1={y}
+                              y2={y}
+                            />
+                          ))}
+                          <polygon
+                            points={`${chartPoints(chart)} 640,230 0,230`}
                           />
-                        ))}
-                        <polygon
-                          points={`${chartPoints(chart)} 640,230 0,230`}
-                        />
-                        <polyline points={chartPoints(chart)} />
-                      </svg>
+                          <polyline points={chartPoints(chart)} />
+                        </svg>
+                        <div className="chart-prices" aria-hidden="true">
+                          {chartTicks.map((tick) => (
+                            <span key={tick}>{formatChartAxisPrice(tick)}</span>
+                          ))}
+                        </div>
+                      </div>
                     ) : (
                       <div className="chart-empty">
                         Historical data unavailable
@@ -529,12 +599,18 @@ export function FeedScreen() {
                     <div className="chart-axis-labels">
                       <span>
                         {chart?.points[0]
-                          ? chartDateLabel(chart.points[0].timestamp)
+                          ? chartDateLabel(
+                              chart.points[0].timestamp,
+                              chartPeriod,
+                            )
                           : ""}
                       </span>
                       <span>
                         {chart?.points.at(-1)
-                          ? chartDateLabel(chart.points.at(-1)!.timestamp)
+                          ? chartDateLabel(
+                              chart.points.at(-1)?.timestamp ?? "",
+                              chartPeriod,
+                            )
                           : ""}
                       </span>
                     </div>
@@ -548,16 +624,16 @@ export function FeedScreen() {
                           ["All", "max"],
                         ] as const
                       ).map(([label, period]) => (
-                          <ChartPeriodButton
-                            key={label}
-                            type="button"
-                            $selected={chartPeriod === period}
-                            aria-pressed={chartPeriod === period}
-                            onClick={() => setChartPeriod(period)}
-                          >
-                            {label}
-                          </ChartPeriodButton>
-                        ))}
+                        <ChartPeriodButton
+                          key={label}
+                          type="button"
+                          $selected={chartPeriod === period}
+                          aria-pressed={chartPeriod === period}
+                          onClick={() => setChartPeriod(period)}
+                        >
+                          {label}
+                        </ChartPeriodButton>
+                      ))}
                       <button
                         type="button"
                         className="chart-help"
@@ -567,12 +643,22 @@ export function FeedScreen() {
                       </button>
                     </div>
                     <div className="chart-footer">
-                      <span>Market signal</span>
-                      {active.priceChange24hPct !== null &&
-                      active.priceChange24hPct !== undefined ? (
-                        <MarketChange $positive={active.priceChange24hPct >= 0}>
-                          {active.priceChange24hPct >= 0 ? "+" : ""}
-                          {active.priceChange24hPct.toFixed(2)}% today
+                      <span>
+                        {chartPeriod === "max"
+                          ? "All time"
+                          : chartPeriod === "1"
+                            ? "1D"
+                            : chartPeriod === "7"
+                              ? "1W"
+                              : chartPeriod === "30"
+                                ? "1M"
+                                : "1Y"}{" "}
+                        signal
+                      </span>
+                      {chartChange !== null ? (
+                        <MarketChange $positive={chartChange >= 0}>
+                          {chartChange >= 0 ? "+" : ""}
+                          {chartChange.toFixed(2)}%
                         </MarketChange>
                       ) : (
                         <strong>Awaiting live data</strong>
