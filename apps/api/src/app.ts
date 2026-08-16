@@ -11,12 +11,16 @@ import helmet from "helmet";
 import { bootstrapAccount } from "./account-bootstrap.js";
 import { feedCatalog, feedItems, ideas } from "./catalog.js";
 import type { FeedCatalogProvider } from "./providers/catalog-provider.js";
-import type { MarketChartProvider } from "./providers/market-data-provider.js";
+import type {
+  MarketChartProvider,
+  MarketDetailsProvider,
+} from "./providers/market-data-provider.js";
 
 export function createApp(
   database: Database,
   catalogProvider: FeedCatalogProvider = feedCatalog,
   chartProvider?: MarketChartProvider,
+  detailsProvider?: MarketDetailsProvider,
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -65,19 +69,40 @@ export function createApp(
   app.get("/api/feed", async (_request, response) => {
     const generatedAt = new Date();
     const expiresAt = new Date(generatedAt.getTime() + 60_000);
+    const sessionId = randomUUID();
     try {
       const items = await catalogProvider.getItems();
       response.json({
-        sessionId: randomUUID(),
+        sessionId,
         generatedAt: generatedAt.toISOString(),
         expiresAt: expiresAt.toISOString(),
-        items,
+        items: orderFeedItems(items, sessionId),
       });
     } catch {
       response.status(503).json({
         error: "FEED_CATALOG_UNAVAILABLE",
         message: "The Feed catalog is temporarily unavailable.",
       });
+    }
+  });
+  app.get("/api/feed/:assetId/details", async (request, response) => {
+    if (!detailsProvider) {
+      response.status(503).json({ error: "ASSET_DETAILS_UNAVAILABLE" });
+      return;
+    }
+
+    const asset = feedItems.find((item) => item.id === request.params.assetId);
+    if (!asset?.coingeckoId) {
+      response.status(404).json({ error: "ASSET_DETAILS_NOT_FOUND" });
+      return;
+    }
+
+    try {
+      response.json(
+        await detailsProvider.getDetails(asset.id, asset.coingeckoId),
+      );
+    } catch {
+      response.status(503).json({ error: "ASSET_DETAILS_UNAVAILABLE" });
     }
   });
   app.get("/api/feed/:assetId/chart", async (request, response) => {
@@ -287,6 +312,21 @@ export function createApp(
   });
 
   return app;
+}
+
+function orderFeedItems(items: typeof feedItems, seed: string) {
+  return [...items].sort(
+    (left, right) => feedOrderKey(seed, left.id) - feedOrderKey(seed, right.id),
+  );
+}
+
+function feedOrderKey(seed: string, id: string) {
+  let hash = 2166136261;
+  for (const character of `${seed}:${id}`) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
 }
 
 async function resolveInternalUserId(

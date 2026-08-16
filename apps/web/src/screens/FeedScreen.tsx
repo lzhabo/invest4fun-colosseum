@@ -1,4 +1,5 @@
 import type {
+  AssetDetailsResponse,
   FeedItem,
   MarketChartPeriod,
   MarketChartResponse,
@@ -16,7 +17,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { BasketRail } from "../components/basket/BasketRail";
-import { getFeed, getMarketChart } from "../services/api";
+import { getAssetDetails, getFeed, getMarketChart } from "../services/api";
 import { useBasket } from "../state/basket-context";
 
 const FeedPage = styled.main`
@@ -176,6 +177,12 @@ const SwipeCard = styled.article<{
     border-radius: 50%;
     background: #eef0f4;
     font-size: 27px;
+  }
+
+  .asset-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .asset-title h2 {
@@ -420,6 +427,41 @@ const RiskLabel = styled.span<{ $risk: FeedItem["riskLabel"] }>`
         : "var(--success)"};
 `;
 
+const AssetDetailsPanel = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+
+  .details-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .details-metrics div {
+    display: grid;
+    gap: 3px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+
+  small {
+    color: var(--muted);
+  }
+
+  a {
+    color: var(--blue);
+    font-weight: 700;
+  }
+`;
+
 function chartPoints(chart: MarketChartResponse) {
   const prices = chart.points.map((point) => point.priceUsd);
   const min = Math.min(...prices);
@@ -487,6 +529,9 @@ export function FeedScreen() {
   const [chartPeriod, setChartPeriod] = useState<MarketChartPeriod>("30");
   const [chart, setChart] = useState<MarketChartResponse | null>(null);
   const [chartLoading, setChartLoading] = useState(false);
+  const [details, setDetails] = useState<AssetDetailsResponse | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>();
   const [dragX, setDragX] = useState(0);
   const [error, setError] = useState(false);
@@ -529,6 +574,21 @@ export function FeedScreen() {
     return () => controller.abort();
   }, [active?.id, active?.coingeckoId, chartPeriod]);
 
+  useEffect(() => {
+    if (!detailsOpen || !active?.coingeckoId) return;
+    const controller = new AbortController();
+    setDetailsLoading(true);
+    getAssetDetails(active.id, controller.signal)
+      .then(setDetails)
+      .catch((reason: unknown) => {
+        if (reason instanceof DOMException && reason.name === "AbortError")
+          return;
+        setDetails(null);
+      })
+      .finally(() => setDetailsLoading(false));
+    return () => controller.abort();
+  }, [active?.id, active?.coingeckoId, detailsOpen]);
+
   useEffect(
     () => () => {
       if (feedbackTimer.current !== undefined)
@@ -551,6 +611,8 @@ export function FeedScreen() {
       setIndex((current) => current + 1);
       setFeedback(undefined);
       setDragX(0);
+      setDetailsOpen(false);
+      setDetails(null);
     }, 300);
   };
 
@@ -694,6 +756,15 @@ export function FeedScreen() {
                   <div className="card-head">
                     <div className="asset-title">
                       <div className="asset-mark">
+                        {active.iconUrl ? (
+                          <img
+                            src={active.iconUrl}
+                            alt=""
+                            onError={(event) => {
+                              event.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : null}
                         {active.symbol.slice(0, 2)}
                       </div>
                       <div>
@@ -806,10 +877,54 @@ export function FeedScreen() {
                         type="button"
                         className="chart-help"
                         aria-label="About this chart"
+                        aria-expanded={detailsOpen}
+                        onClick={() => setDetailsOpen((open) => !open)}
                       >
                         <CircleHelp aria-hidden="true" />
                       </button>
                     </div>
+                    {detailsOpen ? (
+                      <AssetDetailsPanel aria-live="polite">
+                        {detailsLoading ? (
+                          <span>Loading asset details...</span>
+                        ) : null}
+                        {!detailsLoading && details ? (
+                          <>
+                            <div className="details-metrics">
+                              <div>
+                                <small>Market cap</small>
+                                <strong>
+                                  {formatCompactUsd(details.marketCapUsd)}
+                                </strong>
+                              </div>
+                              <div>
+                                <small>24h volume</small>
+                                <strong>
+                                  {formatCompactUsd(details.volume24hUsd)}
+                                </strong>
+                              </div>
+                            </div>
+                            <span>
+                              Categories:{" "}
+                              {details.categories.slice(0, 3).join(", ") ||
+                                "Not listed"}
+                            </span>
+                            {details.websiteUrl ? (
+                              <a
+                                href={details.websiteUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                Website ↗
+                              </a>
+                            ) : null}
+                          </>
+                        ) : null}
+                        {!detailsLoading && !details ? (
+                          <span>Asset details unavailable.</span>
+                        ) : null}
+                      </AssetDetailsPanel>
+                    ) : null}
                   </PriceChart>
 
                   <div className="swipe-card-copy">
@@ -904,6 +1019,16 @@ function relativeTime(value: string) {
 function formatUsd(value: number) {
   return new Intl.NumberFormat("en-US", {
     maximumFractionDigits: value < 1 ? 4 : 2,
+  }).format(value);
+}
+
+function formatCompactUsd(value: number | null) {
+  if (value === null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 2,
   }).format(value);
 }
 

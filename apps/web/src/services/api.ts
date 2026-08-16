@@ -1,4 +1,6 @@
 import {
+  type AssetDetailsResponse,
+  assetDetailsResponseSchema,
   type BasketEntryRequest,
   type BasketReviewResponse,
   basketReviewResponseSchema,
@@ -45,6 +47,17 @@ export function getMarketChart(
   return getJson(
     `/api/feed/${encodeURIComponent(assetId)}/chart?days=${period}`,
     marketChartResponseSchema.parse,
+    signal,
+  );
+}
+
+export function getAssetDetails(
+  assetId: string,
+  signal?: AbortSignal,
+): Promise<AssetDetailsResponse> {
+  return getJson(
+    `/api/feed/${encodeURIComponent(assetId)}/details`,
+    assetDetailsResponseSchema.parse,
     signal,
   );
 }

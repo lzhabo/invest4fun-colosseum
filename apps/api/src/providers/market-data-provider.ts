@@ -1,4 +1,5 @@
 import type {
+  AssetDetailsResponse,
   FeedItem,
   MarketChartPeriod,
   MarketChartResponse,
@@ -26,6 +27,13 @@ export interface MarketChartProvider {
     assetId: string,
     period: MarketChartPeriod,
   ): Promise<MarketChartResponse>;
+}
+
+export interface MarketDetailsProvider {
+  getDetails(
+    assetId: string,
+    coingeckoId: string,
+  ): Promise<AssetDetailsResponse>;
 }
 
 export class CachedMarketDataProvider implements MarketDataProvider {
@@ -102,9 +110,28 @@ export class EnrichedCatalogProvider implements FeedCatalogProvider {
 const marketChartSchema = z.object({
   prices: z.array(z.tuple([z.number(), z.number().nonnegative()])),
 });
+const marketDetailsSchema = z.object({
+  image: z.object({ small: z.string().url().optional() }).optional(),
+  categories: z.array(z.string()).optional(),
+  market_data: z
+    .object({
+      market_cap: z
+        .object({ usd: z.number().nonnegative().optional() })
+        .optional(),
+      total_volume: z
+        .object({ usd: z.number().nonnegative().optional() })
+        .optional(),
+    })
+    .optional(),
+  links: z
+    .object({
+      homepage: z.array(z.string().url().or(z.literal(""))).optional(),
+    })
+    .optional(),
+});
 
 export class CoinGeckoMarketDataProvider
-  implements MarketDataProvider, MarketChartProvider
+  implements MarketDataProvider, MarketChartProvider, MarketDetailsProvider
 {
   constructor(
     private readonly apiKey: string | undefined,
@@ -179,6 +206,33 @@ export class CoinGeckoMarketDataProvider
       source: "coingecko" as const,
       updatedAt: new Date().toISOString(),
       points,
+    };
+  }
+
+  async getDetails(assetId: string, coingeckoId: string) {
+    const url = new URL(`${this.baseUrl}/coins/${coingeckoId}`);
+    url.searchParams.set("localization", "false");
+    url.searchParams.set("tickers", "false");
+    url.searchParams.set("market_data", "true");
+    url.searchParams.set("community_data", "false");
+    url.searchParams.set("developer_data", "false");
+
+    const response = await this.fetcher(url, {
+      ...(this.apiKey ? { headers: { "x-cg-demo-api-key": this.apiKey } } : {}),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) throw new Error(`COINGECKO_DETAILS_${response.status}`);
+
+    const details = marketDetailsSchema.parse(await response.json());
+    return {
+      assetId,
+      source: "coingecko" as const,
+      iconUrl: details.image?.small ?? null,
+      categories: details.categories ?? [],
+      marketCapUsd: details.market_data?.market_cap?.usd ?? null,
+      volume24hUsd: details.market_data?.total_volume?.usd ?? null,
+      websiteUrl: details.links?.homepage?.find(Boolean) || null,
+      updatedAt: new Date().toISOString(),
     };
   }
 }

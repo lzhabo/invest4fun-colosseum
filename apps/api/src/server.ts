@@ -20,6 +20,7 @@ const app = createApp(
   database,
   createFeedCatalog(config.COINGECKO_API_KEY),
   new CoinGeckoMarketDataProvider(config.COINGECKO_API_KEY),
+  new CoinGeckoMarketDataProvider(config.COINGECKO_API_KEY),
 );
 const server = app.listen(config.API_PORT, () => {
   process.stdout.write(

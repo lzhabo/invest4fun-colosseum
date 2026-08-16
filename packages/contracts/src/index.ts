@@ -27,6 +27,7 @@ export const assetSchema = z.object({
   rationale: z.string().min(1),
   riskLabel: z.enum(["lower", "medium", "higher"]),
   coingeckoId: z.string().min(1).nullable().optional(),
+  iconUrl: z.string().url().nullable().optional(),
   priceUsd: z.number().nonnegative().nullable().optional(),
   marketCapUsd: z.number().nonnegative().nullable().optional(),
   volume24hUsd: z.number().nonnegative().nullable().optional(),
@@ -73,6 +74,16 @@ export const marketChartResponseSchema = z.object({
     }),
   ),
 });
+export const assetDetailsResponseSchema = z.object({
+  assetId: z.string().min(1),
+  source: z.literal("coingecko"),
+  iconUrl: z.string().url().nullable(),
+  categories: z.array(z.string()),
+  marketCapUsd: z.number().nonnegative().nullable(),
+  volume24hUsd: z.number().nonnegative().nullable(),
+  websiteUrl: z.string().url().nullable(),
+  updatedAt: z.string().datetime(),
+});
 export const ideasResponseSchema = z.object({ items: z.array(ideaSchema) });
 
 export type Asset = z.infer<typeof assetSchema>;
@@ -81,6 +92,7 @@ export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
 export type MarketChartPeriod = z.infer<typeof marketChartPeriodSchema>;
 export type MarketChartResponse = z.infer<typeof marketChartResponseSchema>;
+export type AssetDetailsResponse = z.infer<typeof assetDetailsResponseSchema>;
 export type IdeasResponse = z.infer<typeof ideasResponseSchema>;
 
 export const basketEntryRequestSchema = z.object({
