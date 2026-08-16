@@ -1,10 +1,42 @@
 import type { Idea } from "@invest4fun/contracts";
 import { Check, ChevronLeft, ChevronRight, Lightbulb, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import styled from "styled-components";
 import { getIdeas } from "../services/api";
 import { useBasket } from "../state/basket-context";
 
 type Feedback = "invest" | "skip";
+
+const IdeaSwipeCard = styled.article<{
+  $feedback: Feedback | undefined;
+  $dragX: number;
+}>`
+  transform: translateX(${({ $dragX }) => $dragX}px)
+    rotate(${({ $dragX }) => $dragX / 28}deg);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+`;
+
+const IdeaDecisionFlash = styled.div<{ $feedback: Feedback }>`
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  background: ${({ $feedback }) =>
+    $feedback === "invest"
+      ? "rgba(33, 164, 71, 0.88)"
+      : "rgba(255, 77, 68, 0.88)"};
+  color: #fff;
+  text-align: center;
+`;
+
+const AllocationBar = styled.i<{ $width: number; $opacity: number }>`
+  width: ${({ $width }) => `${$width}%`};
+  opacity: ${({ $opacity }) => $opacity};
+`;
 
 export function IdeasScreen() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -64,6 +96,43 @@ export function IdeasScreen() {
     if (Math.abs(distance) >= 72) advance(distance > 0);
   };
 
+  function handleSkip() {
+    advance(false);
+  }
+
+  function handleAdd() {
+    advance(true);
+  }
+
+  function handleReview() {
+    basket.open();
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (
+      feedback ||
+      (event.target instanceof HTMLElement && event.target.closest("button, a"))
+    ) {
+      return;
+    }
+
+    pointerStart.current = { id: event.pointerId, x: event.clientX };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
+    if (!pointerStart.current || pointerStart.current.id !== event.pointerId)
+      return;
+    setDragX(
+      Math.max(-140, Math.min(140, event.clientX - pointerStart.current.x)),
+    );
+  }
+
+  function handlePointerCancel() {
+    pointerStart.current = null;
+    setDragX(0);
+  }
+
   if (error) {
     return (
       <main className="legacy-page ideas-page">
@@ -92,7 +161,7 @@ export function IdeasScreen() {
               className="gesture gesture-skip"
               aria-label={`Skip ${active.title}`}
               disabled={Boolean(feedback)}
-              onClick={() => advance(false)}
+              onClick={handleSkip}
             >
               <ChevronLeft aria-hidden="true" />
               <span>
@@ -100,47 +169,17 @@ export function IdeasScreen() {
               </span>
             </button>
 
-            <article
-              className={`idea-swipe-card${feedback ? ` is-${feedback}` : ""}`}
-              style={{
-                transform: `translateX(${dragX}px) rotate(${dragX / 28}deg)`,
-              }}
-              onPointerDown={(event) => {
-                if (
-                  feedback ||
-                  (event.target as HTMLElement).closest("button, a")
-                )
-                  return;
-                pointerStart.current = {
-                  id: event.pointerId,
-                  x: event.clientX,
-                };
-                event.currentTarget.setPointerCapture(event.pointerId);
-              }}
-              onPointerMove={(event) => {
-                if (
-                  !pointerStart.current ||
-                  pointerStart.current.id !== event.pointerId
-                )
-                  return;
-                setDragX(
-                  Math.max(
-                    -140,
-                    Math.min(140, event.clientX - pointerStart.current.x),
-                  ),
-                );
-              }}
+            <IdeaSwipeCard
+              className="idea-swipe-card"
+              $feedback={feedback}
+              $dragX={dragX}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
               onPointerUp={finishPointer}
-              onPointerCancel={() => {
-                pointerStart.current = null;
-                setDragX(0);
-              }}
+              onPointerCancel={handlePointerCancel}
             >
               {feedback ? (
-                <div
-                  className={`card-decision-flash ${feedback}`}
-                  aria-live="polite"
-                >
+                <IdeaDecisionFlash $feedback={feedback} aria-live="polite">
                   {feedback === "invest" ? (
                     <Check aria-hidden="true" />
                   ) : (
@@ -149,7 +188,7 @@ export function IdeasScreen() {
                   <strong>
                     {feedback === "invest" ? "In your basket" : "Skipped"}
                   </strong>
-                </div>
+                </IdeaDecisionFlash>
               ) : null}
               <div className="idea-card-header">
                 <div className="legacy-idea-icon" aria-hidden="true">
@@ -172,12 +211,10 @@ export function IdeasScreen() {
                 </div>
                 <div className="idea-allocation-bars" aria-hidden="true">
                   {active.positions.map((position, positionIndex) => (
-                    <i
+                    <AllocationBar
                       key={position.symbol}
-                      style={{
-                        width: `${100 / active.positions.length}%`,
-                        opacity: `${1 - positionIndex * 0.08}`,
-                      }}
+                      $width={100 / active.positions.length}
+                      $opacity={1 - positionIndex * 0.08}
                     />
                   ))}
                 </div>
@@ -193,14 +230,14 @@ export function IdeasScreen() {
                   Prepared idea · allocation details will be shown at review.
                 </small>
               </div>
-            </article>
+            </IdeaSwipeCard>
 
             <button
               type="button"
               className="gesture gesture-add"
               aria-label={`Add ${active.title} to basket`}
               disabled={Boolean(feedback)}
-              onClick={() => advance(true)}
+              onClick={handleAdd}
             >
               <span>
                 Add<small>Swipe right</small>
@@ -221,7 +258,7 @@ export function IdeasScreen() {
               type="button"
               className="legacy-primary-button"
               disabled={!basket.count}
-              onClick={basket.open}
+              onClick={handleReview}
             >
               Review basket
             </button>
@@ -241,7 +278,7 @@ export function IdeasScreen() {
             type="button"
             className="legacy-primary-button"
             disabled={!basket.count}
-            onClick={basket.open}
+            onClick={handleReview}
           >
             Review basket <ChevronRight aria-hidden="true" />
           </button>
