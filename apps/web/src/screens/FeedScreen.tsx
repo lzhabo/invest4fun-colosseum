@@ -8,6 +8,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  CircleHelp,
   Plus,
   WandSparkles,
   X,
@@ -146,9 +147,9 @@ const SwipeCard = styled.article<{
   min-height: 550px;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
+  border: 2px solid var(--line-strong);
   border-radius: 14px;
+  padding: 20px 20px 15px;
   background: var(--paper);
   box-shadow: ${({ $feedback }) =>
     $feedback === "invest"
@@ -164,9 +165,56 @@ const SwipeCard = styled.article<{
     transform 180ms ease,
     box-shadow 180ms ease;
 
+  .card-head {
+    align-items: center;
+    padding: 0;
+  }
+
+  .asset-mark {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #eef0f4;
+    font-size: 27px;
+  }
+
+  .asset-title h2 {
+    font-size: 42px;
+    line-height: 0.95;
+  }
+
+  .asset-title p {
+    margin-top: 5px;
+  }
+
+  @media (min-width: 761px) {
+    .price-chart {
+      flex: 1;
+      height: auto;
+      min-height: 230px;
+    }
+
+    .chart-plot {
+      flex: 1;
+      height: auto;
+      min-height: 112px;
+    }
+  }
+
   @media (max-width: 520px) {
-    min-height: 520px;
-    box-shadow: 6px 7px 0 var(--line);
+    min-height: 505px;
+    padding: 16px 15px 12px;
+    box-shadow: 7px 7px 0 var(--line);
+
+    .asset-mark {
+      width: 56px;
+      height: 56px;
+      font-size: 20px;
+    }
+
+    .asset-title h2 {
+      font-size: 32px;
+    }
   }
 `;
 
@@ -196,21 +244,35 @@ const PriceChart = styled.div<{ $isDown: boolean }>`
   flex: 1;
   flex-direction: column;
   justify-content: end;
-  min-height: 280px;
-  padding: 18px 30px 20px;
-  background: var(--ground);
+  height: 230px;
+  margin: 16px 0;
+  border-top: 1px solid var(--line);
+  color: ${({ $isDown }) => ($isDown ? "var(--coral)" : "#00a83e")};
 
-  html[data-theme="dark"] & {
-    background: #0b1210;
+  .chart-meta {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: baseline;
+    gap: 7px 12px;
+    padding-top: 10px;
   }
 
-  .mock-price-chart {
-    color: ${({ $isDown }) => ($isDown ? "var(--coral)" : "var(--success)")};
+  .chart-meta strong {
+    color: var(--ink);
+    font: 24px / 1 var(--font-brand);
+  }
+
+  .chart-meta span {
+    justify-self: end;
+    color: currentColor;
+    font-size: 13px;
+    font-weight: 800;
+    text-align: right;
   }
 
   .chart-empty {
     display: grid;
-    min-height: 190px;
+    min-height: 112px;
     place-items: center;
     color: var(--muted);
     font-size: 13px;
@@ -218,16 +280,37 @@ const PriceChart = styled.div<{ $isDown: boolean }>`
 
   .chart-plot {
     position: relative;
-    min-height: 190px;
-    margin-top: 14px;
+    width: 100%;
+    height: 112px;
     padding-right: 48px;
   }
 
-  .chart-plot .mock-price-chart {
-    width: 100%;
-    height: 190px;
-    min-height: 0;
-    margin-top: 0;
+  .chart-plot > svg {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: calc(100% - 48px);
+    height: 100%;
+    overflow: visible;
+  }
+
+  .mock-price-chart .chart-gridline {
+    stroke: var(--line);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .mock-price-chart polyline {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .mock-price-chart polygon {
+    fill: currentColor;
+    opacity: 0.09;
   }
 
   .chart-prices {
@@ -235,14 +318,85 @@ const PriceChart = styled.div<{ $isDown: boolean }>`
     top: 0;
     right: 0;
     bottom: 0;
+    width: 42px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 2px 0 4px;
+    padding: 0;
     color: var(--muted);
     font-size: 10px;
+    font-weight: 700;
     line-height: 1;
     text-align: right;
+
+    span {
+      transform: translateY(-50%);
+    }
+  }
+
+  .chart-axis-labels {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    margin: 5px 50px 6px 2px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+
+    span:last-child {
+      text-align: right;
+    }
+  }
+
+  .chart-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 6px;
+    margin: 4px 0;
+  }
+
+  .chart-controls > .chart-timeframes {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    min-width: 0;
+    margin: 0;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+
+  .chart-controls .chart-timeframes button {
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .chart-controls .chart-timeframes button[aria-pressed="true"] {
+    background: var(--acid);
+    color: var(--ink);
+  }
+
+  .chart-controls .chart-help {
+    display: grid;
+    min-width: 36px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .chart-controls .chart-help svg {
+    width: 15px;
+    height: 15px;
   }
 `;
 
@@ -255,10 +409,6 @@ const ChartPeriodButton = styled.button<{ $selected: boolean }>`
   cursor: pointer;
   font-size: 11px;
   font-weight: 800;
-`;
-
-const MarketChange = styled.strong<{ $positive: boolean }>`
-  color: ${({ $positive }) => ($positive ? "var(--success)" : "var(--coral)")};
 `;
 
 const RiskLabel = styled.span<{ $risk: FeedItem["riskLabel"] }>`
@@ -315,6 +465,18 @@ function chartDateLabel(timestamp: string, period: MarketChartPeriod) {
       ? { month: "short", day: "numeric" }
       : { month: "short", year: "numeric" },
   ).format(date);
+}
+
+function chartPeriodLabel(period: MarketChartPeriod) {
+  return period === "1"
+    ? "1D"
+    : period === "7"
+      ? "1W"
+      : period === "30"
+        ? "1M"
+        : period === "365"
+          ? "1Y"
+          : "All";
 }
 
 export function FeedScreen() {
@@ -553,12 +715,16 @@ export function FeedScreen() {
                     }
                   >
                     <div className="chart-meta">
-                      <span>
+                      <strong>
                         {active.priceUsd
                           ? `$${formatUsd(active.priceUsd)}`
                           : "Price unavailable"}
+                      </strong>
+                      <span>
+                        {chartChange !== null
+                          ? `${chartChange >= 0 ? "+" : ""}${chartChange.toFixed(2)}% · ${chartPeriodLabel(chartPeriod)}`
+                          : "—"}
                       </span>
-                      <small>{active.marketDataSource}</small>
                     </div>
                     {chartLoading ? (
                       <div className="chart-empty">Loading chart...</div>
@@ -615,54 +781,34 @@ export function FeedScreen() {
                       </span>
                     </div>
                     <div className="chart-controls">
-                      {(
-                        [
-                          ["1D", "1"],
-                          ["1W", "7"],
-                          ["1M", "30"],
-                          ["1Y", "365"],
-                          ["All", "max"],
-                        ] as const
-                      ).map(([label, period]) => (
-                        <ChartPeriodButton
-                          key={label}
-                          type="button"
-                          $selected={chartPeriod === period}
-                          aria-pressed={chartPeriod === period}
-                          onClick={() => setChartPeriod(period)}
-                        >
-                          {label}
-                        </ChartPeriodButton>
-                      ))}
+                      <div className="chart-timeframes">
+                        {(
+                          [
+                            ["1D", "1"],
+                            ["1W", "7"],
+                            ["1M", "30"],
+                            ["1Y", "365"],
+                            ["All", "max"],
+                          ] as const
+                        ).map(([label, period]) => (
+                          <ChartPeriodButton
+                            key={label}
+                            type="button"
+                            $selected={chartPeriod === period}
+                            aria-pressed={chartPeriod === period}
+                            onClick={() => setChartPeriod(period)}
+                          >
+                            {label}
+                          </ChartPeriodButton>
+                        ))}
+                      </div>
                       <button
                         type="button"
                         className="chart-help"
                         aria-label="About this chart"
                       >
-                        ?
+                        <CircleHelp aria-hidden="true" />
                       </button>
-                    </div>
-                    <div className="chart-footer">
-                      <span>
-                        {chartPeriod === "max"
-                          ? "All time"
-                          : chartPeriod === "1"
-                            ? "1D"
-                            : chartPeriod === "7"
-                              ? "1W"
-                              : chartPeriod === "30"
-                                ? "1M"
-                                : "1Y"}{" "}
-                        signal
-                      </span>
-                      {chartChange !== null ? (
-                        <MarketChange $positive={chartChange >= 0}>
-                          {chartChange >= 0 ? "+" : ""}
-                          {chartChange.toFixed(2)}%
-                        </MarketChange>
-                      ) : (
-                        <strong>Awaiting live data</strong>
-                      )}
                     </div>
                   </PriceChart>
 
