@@ -4,10 +4,31 @@
 html {
   color-scheme: light;
 }
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f4f7f5;
+  --muted: #9aa7a2;
+  --paper: #101716;
+  --ground: #080d0c;
+  --line: #2a3934;
+  --line-strong: #e0e9e4;
+  --acid: #14f195;
+  --acid-hover: #20d887;
+  --coral: #ff756e;
+  --blue: #9db8ff;
+  --blue-soft: #162439;
+  --success: #51d889;
+  --warning: #e4b95d;
+  --shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+  --focus-ring: rgba(20, 241, 149, 0.4);
+}
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--ground);
+}
+html[data-theme="dark"] body {
   background: var(--ground);
 }
 button,

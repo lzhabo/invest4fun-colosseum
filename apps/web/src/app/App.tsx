@@ -5,6 +5,7 @@ import { FeedScreen } from "../screens/FeedScreen";
 import { IdeasScreen } from "../screens/IdeasScreen";
 import { PortfolioScreen } from "../screens/PortfolioScreen";
 import { BasketProvider } from "../state/basket-context";
+import { ThemeProvider } from "../state/theme-context";
 import { useServiceHealth } from "./use-service-health";
 
 const screens: Record<AppView, React.ComponentType> = {
@@ -20,10 +21,12 @@ export function App() {
   const Screen = screens[view];
 
   return (
-    <BasketProvider>
-      <AppShell activeView={view} onNavigate={setView} serviceStatus={status}>
-        <Screen />
-      </AppShell>
-    </BasketProvider>
+    <ThemeProvider>
+      <BasketProvider>
+        <AppShell activeView={view} onNavigate={setView} serviceStatus={status}>
+          <Screen />
+        </AppShell>
+      </BasketProvider>
+    </ThemeProvider>
   );
 }

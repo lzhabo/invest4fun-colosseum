@@ -1458,6 +1458,65 @@
   margin-top: 28px;
   color: var(--coral);
 }
+.account-command-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.account-setting-value {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.theme-switcher {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.theme-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+.theme-switcher button.selected {
+  border-color: var(--line-strong);
+  background: var(--acid);
+  color: #07110d;
+}
+.theme-switcher svg {
+  width: 16px;
+  height: 16px;
+}
+html[data-theme="dark"] .account-balance > div:first-child > span,
+html[data-theme="dark"] .account-balance small,
+html[data-theme="dark"] .account-address > span {
+  color: #153b2c;
+}
+html[data-theme="dark"] .account-balance {
+  color: #07110d;
+}
+html[data-theme="dark"] .account-balance strong,
+html[data-theme="dark"] .account-balance .account-address strong {
+  color: #07110d;
+}
+html[data-theme="dark"] .account-wallet-icon {
+  border-color: #2b5848;
+  background: #13251f;
+}
 .basket-dialog-layer {
   position: fixed;
   z-index: 30;

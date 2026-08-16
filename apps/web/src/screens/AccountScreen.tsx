@@ -7,15 +7,19 @@ import {
   ExternalLink,
   Info,
   LogOut,
+  Moon,
+  Sun,
   Wallet,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../auth/auth-context";
 import { EmptyState } from "../components/ui/EmptyState";
+import { useTheme } from "../state/theme-context";
 
 export function AccountScreen() {
   const auth = useAuth();
+  const { theme, setTheme } = useTheme();
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
@@ -214,6 +218,33 @@ export function AccountScreen() {
             <span>Login provider</span>
             <strong>Privy</strong>
           </div>
+        </section>
+        <section className="account-command-section account-appearance-section">
+          <div className="account-command-heading">
+            <h2>Appearance</h2>
+            <span className="account-setting-value">
+              {theme === "dark" ? "Dark" : "Light"}
+            </span>
+          </div>
+          <fieldset className="theme-switcher">
+            <legend className="sr-only">Theme</legend>
+            <button
+              type="button"
+              className={theme === "light" ? "selected" : ""}
+              aria-pressed={theme === "light"}
+              onClick={() => setTheme("light")}
+            >
+              <Sun aria-hidden="true" /> Light
+            </button>
+            <button
+              type="button"
+              className={theme === "dark" ? "selected" : ""}
+              aria-pressed={theme === "dark"}
+              onClick={() => setTheme("dark")}
+            >
+              <Moon aria-hidden="true" /> Dark
+            </button>
+          </fieldset>
         </section>
         <button
           type="button"
