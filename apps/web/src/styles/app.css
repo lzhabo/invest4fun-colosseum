@@ -601,165 +601,6 @@
       rgba(9, 10, 11, 0.04) 64px
     );
 }
-.feed-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
-  min-height: calc(100dvh - 74px - 170px);
-  margin: -42px -38px -128px;
-}
-.feed-main {
-  min-width: 0;
-  padding: 42px 38px 128px;
-}
-.basket-rail {
-  min-width: 0;
-  padding: 30px 26px;
-  border-left: 1px solid var(--line);
-  background: color-mix(in srgb, var(--ground) 78%, var(--paper));
-}
-.rail-budget {
-  display: grid;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.rail-budget strong {
-  color: var(--ink);
-  font-size: 14px;
-}
-.rail-budget-progress {
-  display: block;
-  height: 5px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--line);
-}
-.rail-budget-progress i {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--acid);
-  transition: width 180ms ease;
-}
-.basket-rail-meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 26px;
-  color: var(--muted);
-  font-size: 11px;
-}
-.basket-rail-meta i {
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin: 0 4px;
-  border-radius: 50%;
-  background: #ff3b8d;
-}
-.basket-rail-meta .solana-dot {
-  background: var(--acid);
-}
-.basket-rail-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 44px;
-}
-.basket-rail-heading h2 {
-  margin: 0;
-  font: 22px / 1.1 var(--font-brand);
-}
-.basket-rail-heading > span {
-  color: var(--muted);
-  font-size: 12px;
-}
-.basket-rail-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 24px;
-}
-.basket-rail-row {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto 28px;
-  align-items: center;
-  gap: 9px;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--paper);
-}
-.basket-rail-mark {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--acid);
-  color: #07110d;
-  font-size: 10px;
-  font-weight: 900;
-}
-.basket-rail-name,
-.basket-rail-amount {
-  display: grid;
-  min-width: 0;
-  gap: 3px;
-}
-.basket-rail-name strong {
-  overflow: hidden;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.basket-rail-name small,
-.basket-rail-amount small {
-  color: var(--muted);
-  font-size: 10px;
-}
-.basket-rail-amount {
-  justify-items: end;
-}
-.basket-rail-amount strong {
-  font-size: 13px;
-}
-.basket-rail-row > button {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 0;
-  border-left: 1px solid var(--line);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-.basket-rail-row > button:hover {
-  color: var(--coral);
-}
-.basket-rail-row > button svg {
-  width: 17px;
-  height: 17px;
-}
-.basket-rail-empty {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  margin-top: 24px;
-  padding: 34px 12px;
-  border: 1px dashed var(--line);
-  border-radius: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-}
-.basket-rail-empty svg {
-  width: 25px;
-  height: 25px;
-  color: var(--blue);
-}
 .page-heading {
   max-width: 760px;
   margin: 0 auto 34px;
@@ -1825,9 +1666,6 @@ html[data-theme="dark"] .feed-workspace {
       rgba(244, 247, 245, 0.045) 64px
     );
 }
-html[data-theme="dark"] .basket-rail {
-  background: #0b1210;
-}
 html[data-theme="dark"] .price-chart {
   background: #0b1210;
 }
@@ -2141,18 +1979,6 @@ html[data-theme="dark"] .chart-controls button.selected {
     padding-right: 20px;
     padding-left: 20px;
   }
-  .feed-layout {
-    display: block;
-    min-height: 0;
-    margin: -42px -20px -100px;
-  }
-  .feed-main {
-    padding: 42px 20px 100px;
-  }
-  .basket-rail {
-    border-top: 1px solid var(--line);
-    border-left: 0;
-  }
   .page-heading h1,
   .account-heading h1 {
     font-size: 40px;
@@ -2266,9 +2092,6 @@ html[data-theme="dark"] .chart-controls button.selected {
   .positions-page {
     padding: 28px 16px 112px;
   }
-  .feed-layout {
-    margin: -28px -16px -112px;
-  }
   .page-heading h1,
   .account-heading h1 {
     font-size: 34px;
@@ -2281,9 +2104,6 @@ html[data-theme="dark"] .chart-controls button.selected {
     grid-template-columns: 1fr;
     gap: 12px;
     min-height: 0;
-  }
-  .feed-main {
-    padding-bottom: 260px;
   }
   .feed-card-stage > .gesture {
     display: none;

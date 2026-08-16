@@ -9,11 +9,211 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import styled from "styled-components";
 import { BasketRail } from "../components/basket/BasketRail";
 import { getFeed } from "../services/api";
 import { useBasket } from "../state/basket-context";
 
+const FeedPage = styled.main`
+  min-height: calc(100dvh - 74px);
+  background: var(--ground);
+`;
+
+const FeedWorkspace = styled.section`
+  min-height: inherit;
+  padding: 42px 38px 128px;
+  background:
+    linear-gradient(rgba(241, 243, 246, 0.92), rgba(241, 243, 246, 0.92)),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 63px,
+      rgba(9, 10, 11, 0.04) 64px
+    );
+
+  html[data-theme="dark"] & {
+    background:
+      linear-gradient(rgba(8, 13, 12, 0.92), rgba(8, 13, 12, 0.92)),
+      repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 63px,
+        rgba(244, 247, 245, 0.045) 64px
+      );
+  }
+
+  @media (max-width: 900px) {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+
+  @media (max-width: 520px) {
+    padding: 28px 16px 112px;
+  }
+`;
+
+const FeedLayout = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
+  min-height: calc(100dvh - 74px - 170px);
+  margin: -42px -38px -128px;
+
+  @media (max-width: 900px) {
+    display: block;
+    min-height: 0;
+    margin: -42px -20px -100px;
+  }
+
+  @media (max-width: 520px) {
+    margin: -28px -16px -112px;
+  }
+`;
+
+const FeedMain = styled.div`
+  min-width: 0;
+  padding: 42px 38px 128px;
+
+  @media (max-width: 900px) {
+    padding: 42px 20px 100px;
+  }
+
+  @media (max-width: 520px) {
+    padding-bottom: 260px;
+  }
+`;
+
+const FeedHeading = styled.header`
+  max-width: 760px;
+  margin: 0 auto 34px;
+
+  h1 {
+    margin: 8px 0 12px;
+    font: 48px / 0.98 var(--font-brand);
+    letter-spacing: 0;
+  }
+
+  p {
+    max-width: 650px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .source-note {
+    display: block;
+    margin-top: 14px;
+  }
+
+  @media (max-width: 900px) {
+    h1 {
+      font-size: 40px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    h1 {
+      font-size: 34px;
+    }
+  }
+`;
+
 type Feedback = "invest" | "skip";
+
+const SwipeCard = styled.article<{
+  $feedback: Feedback | undefined;
+  $dragX: number;
+}>`
+  position: relative;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: ${({ $feedback }) =>
+    $feedback === "invest"
+      ? "16px 14px 0 var(--success)"
+      : $feedback === "skip"
+        ? "16px 14px 0 var(--coral)"
+        : "16px 14px 0 var(--line)"};
+  touch-action: pan-y;
+  user-select: none;
+  transform: translateX(${({ $dragX }) => $dragX}px)
+    rotate(${({ $dragX }) => $dragX / 28}deg);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+
+  @media (max-width: 520px) {
+    min-height: 520px;
+    box-shadow: 6px 7px 0 var(--line);
+  }
+`;
+
+const DecisionFlash = styled.div<{ $feedback: Feedback }>`
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  background: ${({ $feedback }) =>
+    $feedback === "invest"
+      ? "rgba(33, 164, 71, 0.88)"
+      : "rgba(255, 77, 68, 0.88)"};
+  color: #fff;
+  text-align: center;
+
+  svg {
+    width: 42px;
+    height: 42px;
+    margin: 0 auto;
+  }
+`;
+
+const PriceChart = styled.div<{ $isDown: boolean }>`
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: end;
+  min-height: 280px;
+  padding: 18px 30px 20px;
+  background: var(--ground);
+
+  html[data-theme="dark"] & {
+    background: #0b1210;
+  }
+
+  .mock-price-chart {
+    color: ${({ $isDown }) => ($isDown ? "var(--coral)" : "var(--success)")};
+  }
+`;
+
+const ChartPeriodButton = styled.button<{ $selected: boolean }>`
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: ${({ $selected }) => ($selected ? "var(--acid)" : "transparent")};
+  color: ${({ $selected }) => ($selected ? "#07110d" : "var(--muted)")};
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+`;
+
+const MarketChange = styled.strong<{ $positive: boolean }>`
+  color: ${({ $positive }) => ($positive ? "var(--success)" : "var(--coral)")};
+`;
+
+const RiskLabel = styled.span<{ $risk: FeedItem["riskLabel"] }>`
+  color: ${({ $risk }) =>
+    $risk === "higher"
+      ? "var(--coral)"
+      : $risk === "medium"
+        ? "var(--warning)"
+        : "var(--success)"};
+`;
 
 export function FeedScreen() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -73,25 +273,70 @@ export function FeedScreen() {
     if (Math.abs(distance) >= 72) advance(distance > 0);
   };
 
+  function handleSkip() {
+    advance(false);
+  }
+
+  function handleAdd() {
+    advance(true);
+  }
+
+  function handleReview() {
+    basket.open();
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (
+      feedback ||
+      (event.target instanceof HTMLElement && event.target.closest("button, a"))
+    ) {
+      return;
+    }
+
+    pointerStart.current = {
+      id: event.pointerId,
+      x: event.clientX,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLElement>) {
+    if (!pointerStart.current || pointerStart.current.id !== event.pointerId)
+      return;
+
+    setDragX(
+      Math.max(-140, Math.min(140, event.clientX - pointerStart.current.x)),
+    );
+  }
+
+  function handlePointerCancel() {
+    pointerStart.current = null;
+    setDragX(0);
+  }
+
+  function handleTicketAmountChange(amount: number) {
+    setTicketAmount(amount);
+  }
+
   if (error) {
     return (
-      <main className="legacy-page feed-page">
-        <section className="feed-workspace">
+      <FeedPage>
+        <FeedWorkspace>
           <div className="inline-alert" role="alert">
             The catalog is temporarily unavailable. Check that the API is
             running.
           </div>
-        </section>
-      </main>
+        </FeedWorkspace>
+      </FeedPage>
     );
   }
 
   return (
-    <main className="legacy-page feed-page">
-      <section className="feed-workspace">
-        <div className="feed-layout">
-          <div className="feed-main">
-            <header className="page-heading feed-heading">
+    <FeedPage>
+      <FeedWorkspace>
+        <FeedLayout>
+          <FeedMain>
+            <FeedHeading>
               <h1>Build your basket</h1>
               <p>Swipe right to add left to skip.</p>
               {!active && feed.length ? (
@@ -105,7 +350,7 @@ export function FeedScreen() {
                     : "Curated asset data"}
                 </span>
               ) : null}
-            </header>
+            </FeedHeading>
 
             {active ? (
               <div className="feed-card-stage">
@@ -114,7 +359,7 @@ export function FeedScreen() {
                   className="gesture gesture-skip"
                   aria-label={`Skip ${active.name}`}
                   disabled={Boolean(feedback)}
-                  onClick={() => advance(false)}
+                  onClick={handleSkip}
                 >
                   <ChevronLeft aria-hidden="true" />
                   <span>
@@ -122,47 +367,16 @@ export function FeedScreen() {
                   </span>
                 </button>
 
-                <article
-                  className={`swipe-card${feedback ? ` is-${feedback}` : ""}`}
-                  style={{
-                    transform: `translateX(${dragX}px) rotate(${dragX / 28}deg)`,
-                  }}
-                  onPointerDown={(event) => {
-                    if (
-                      feedback ||
-                      (event.target as HTMLElement).closest("button, a")
-                    )
-                      return;
-                    pointerStart.current = {
-                      id: event.pointerId,
-                      x: event.clientX,
-                    };
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                  }}
-                  onPointerMove={(event) => {
-                    if (
-                      !pointerStart.current ||
-                      pointerStart.current.id !== event.pointerId
-                    )
-                      return;
-                    setDragX(
-                      Math.max(
-                        -140,
-                        Math.min(140, event.clientX - pointerStart.current.x),
-                      ),
-                    );
-                  }}
+                <SwipeCard
+                  $feedback={feedback}
+                  $dragX={dragX}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
                   onPointerUp={finishPointer}
-                  onPointerCancel={() => {
-                    pointerStart.current = null;
-                    setDragX(0);
-                  }}
+                  onPointerCancel={handlePointerCancel}
                 >
                   {feedback ? (
-                    <div
-                      className={`card-decision-flash ${feedback}`}
-                      aria-live="polite"
-                    >
+                    <DecisionFlash $feedback={feedback} aria-live="polite">
                       {feedback === "invest" ? (
                         <Check aria-hidden="true" />
                       ) : (
@@ -171,7 +385,7 @@ export function FeedScreen() {
                       <strong>
                         {feedback === "invest" ? "In your basket" : "Skipped"}
                       </strong>
-                    </div>
+                    </DecisionFlash>
                   ) : null}
                   <div className="card-head">
                     <div className="asset-title">
@@ -185,12 +399,16 @@ export function FeedScreen() {
                     </div>
                     <TicketAmountEditor
                       amount={ticketAmount}
-                      onChange={setTicketAmount}
+                      onChange={handleTicketAmountChange}
                     />
                   </div>
 
-                  <div
-                    className={`price-chart${active.priceChange24hPct !== null && active.priceChange24hPct !== undefined && active.priceChange24hPct < 0 ? " is-down" : ""}`}
+                  <PriceChart
+                    $isDown={
+                      active.priceChange24hPct !== null &&
+                      active.priceChange24hPct !== undefined &&
+                      active.priceChange24hPct < 0
+                    }
                   >
                     <div className="chart-meta">
                       <span>
@@ -226,14 +444,14 @@ export function FeedScreen() {
                     <div className="chart-controls">
                       {(["1D", "1W", "1M", "1Y", "All"] as const).map(
                         (period) => (
-                          <button
+                          <ChartPeriodButton
                             key={period}
                             type="button"
-                            className={period === "1M" ? "selected" : ""}
+                            $selected={period === "1M"}
                             aria-pressed={period === "1M"}
                           >
                             {period}
-                          </button>
+                          </ChartPeriodButton>
                         ),
                       )}
                       <button
@@ -248,37 +466,31 @@ export function FeedScreen() {
                       <span>Market signal</span>
                       {active.priceChange24hPct !== null &&
                       active.priceChange24hPct !== undefined ? (
-                        <strong
-                          className={
-                            active.priceChange24hPct >= 0
-                              ? "positive"
-                              : "negative"
-                          }
-                        >
+                        <MarketChange $positive={active.priceChange24hPct >= 0}>
                           {active.priceChange24hPct >= 0 ? "+" : ""}
                           {active.priceChange24hPct.toFixed(2)}% today
-                        </strong>
+                        </MarketChange>
                       ) : (
                         <strong>Awaiting live data</strong>
                       )}
                     </div>
-                  </div>
+                  </PriceChart>
 
                   <div className="swipe-card-copy">
-                    <span className={`risk-label ${active.riskLabel}`}>
+                    <RiskLabel $risk={active.riskLabel}>
                       {active.riskLabel} risk
-                    </span>
+                    </RiskLabel>
                     <p>{active.rationale}</p>
                     <small>Source: {active.sourceLabel}</small>
                   </div>
-                </article>
+                </SwipeCard>
 
                 <button
                   type="button"
                   className="gesture gesture-add"
                   aria-label={`Add ${active.name} to basket`}
                   disabled={Boolean(feedback)}
-                  onClick={() => advance(true)}
+                  onClick={handleAdd}
                 >
                   <span>
                     Add<small>Swipe right</small>
@@ -299,7 +511,7 @@ export function FeedScreen() {
                   type="button"
                   className="legacy-primary-button"
                   disabled={!basket.count}
-                  onClick={basket.open}
+                  onClick={handleReview}
                 >
                   <Plus aria-hidden="true" /> Review basket
                 </button>
@@ -310,7 +522,7 @@ export function FeedScreen() {
               <button
                 type="button"
                 className="feed-action feed-action-skip"
-                onClick={() => advance(false)}
+                onClick={handleSkip}
                 disabled={!active || Boolean(feedback)}
               >
                 <ChevronLeft aria-hidden="true" /> Skip
@@ -318,7 +530,7 @@ export function FeedScreen() {
               <button
                 type="button"
                 className="feed-action feed-action-review"
-                onClick={basket.open}
+                onClick={handleReview}
                 disabled={!basket.count}
               >
                 Review basket ({basket.count}){" "}
@@ -327,17 +539,17 @@ export function FeedScreen() {
               <button
                 type="button"
                 className="feed-action feed-action-add"
-                onClick={() => advance(true)}
+                onClick={handleAdd}
                 disabled={!active || Boolean(feedback)}
               >
                 Add {ticketAmount} USDC <ChevronRight aria-hidden="true" />
               </button>
             </div>
-          </div>
+          </FeedMain>
           <BasketRail />
-        </div>
-      </section>
-    </main>
+        </FeedLayout>
+      </FeedWorkspace>
+    </FeedPage>
   );
 }
 
@@ -383,6 +595,22 @@ function TicketAmountEditor({
     setEditing(false);
   }
 
+  function handleDraftChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setDraft(event.target.value);
+  }
+
+  function handleDraftKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") finish();
+    if (event.key === "Escape") {
+      setDraft(String(amount));
+      setEditing(false);
+    }
+  }
+
+  function handleStartEditing() {
+    setEditing(true);
+  }
+
   if (editing) {
     return (
       <div className="allocation-stamp allocation-amount-editor is-editing">
@@ -395,15 +623,9 @@ function TicketAmountEditor({
           inputMode="decimal"
           value={draft}
           aria-label="Basket ticket amount in USDC"
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={handleDraftChange}
           onBlur={finish}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") finish();
-            if (event.key === "Escape") {
-              setDraft(String(amount));
-              setEditing(false);
-            }
-          }}
+          onKeyDown={handleDraftKeyDown}
         />
         <WandSparkles aria-hidden="true" />
       </div>
@@ -415,7 +637,7 @@ function TicketAmountEditor({
       type="button"
       className="allocation-stamp allocation-amount-editor"
       aria-label={`Edit basket ticket amount, currently ${amount} dollars`}
-      onClick={() => setEditing(true)}
+      onClick={handleStartEditing}
     >
       <span>$</span>
       <strong>{amount}</strong>
