@@ -65,12 +65,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <PrivyProvider
       appId={privyAppId}
       config={{
-        loginMethods: ["email", "google", "passkey", "wallet"],
+        loginMethods: ["email", "wallet"],
         appearance: {
+          theme: "light",
+          accentColor: "#baff00",
           walletChainType: "solana-only",
-          showWalletLoginFirst: true,
+          walletList: [
+            "phantom",
+            "solflare",
+            "backpack",
+            "jupiter",
+            "detected_solana_wallets",
+            "wallet_connect_qr_solana",
+          ],
+          showWalletLoginFirst: false,
         },
-        externalWallets: { solana: { connectors: toSolanaWalletConnectors() } },
+        externalWallets: {
+          solana: {
+            connectors: toSolanaWalletConnectors({ shouldAutoConnect: false }),
+          },
+        },
         embeddedWallets: { solana: { createOnLogin: "all-users" } },
       }}
     >
@@ -99,6 +113,13 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
     },
   });
 
+  const loginWithLegacyFlow = () => {
+    login({
+      loginMethods: ["email", "wallet"],
+      walletChainType: "solana-only",
+    });
+  };
+
   useEffect(() => {
     if (!authenticated) {
       setAccountReady(false);
@@ -124,7 +145,7 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
         ready,
         authenticated,
         user,
-        login,
+        login: loginWithLegacyFlow,
         logout,
         getAccessToken,
         wallets: solanaWallets.map((wallet) => {

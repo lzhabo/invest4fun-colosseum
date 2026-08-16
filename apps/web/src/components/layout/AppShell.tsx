@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import type { ServiceStatus } from "../../app/use-service-health";
 import { useAuth } from "../../auth/auth-context";
+import { reviewBasket } from "../../services/api";
 import { useBasket } from "../../state/basket-context";
 import { WalletMenu } from "./WalletMenu";
 
@@ -42,6 +43,8 @@ export function AppShell({
   const auth = useAuth();
   const basket = useBasket();
   const [prepared, setPrepared] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
   const basketTotal = basket.entries.reduce(
     (total, entry) => total + (entry.amountUsd ?? 0),
     0,
@@ -51,6 +54,30 @@ export function AppShell({
     basket.entries.every(
       (entry) => Number.isFinite(entry.amountUsd) && entry.amountUsd >= 0.1,
     );
+
+  async function preparePurchase() {
+    setPrepareError(null);
+    setPreparing(true);
+    try {
+      const accessToken = await auth.getAccessToken();
+      if (!accessToken) throw new Error("AUTH_REQUIRED");
+      await reviewBasket(
+        basket.entries.map(({ id, kind, amountUsd }) => ({
+          id,
+          kind,
+          amountUsd,
+        })),
+        accessToken,
+      );
+      setPrepared(true);
+    } catch {
+      setPrepareError(
+        "We could not prepare this basket. Check your session and try again.",
+      );
+    } finally {
+      setPreparing(false);
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -198,8 +225,12 @@ export function AppShell({
             ) : null}
             {prepared ? (
               <p className="basket-prepared-note" role="status">
-                Draft order prepared locally. Wallet signing will be connected
-                in the Jupiter execution phase.
+                Draft order prepared on the server. Wallet signing will be
+                connected in the Jupiter execution phase.
+              </p>
+            ) : prepareError ? (
+              <p className="basket-validation-note" role="alert">
+                {prepareError}
               </p>
             ) : !basketIsValid && basket.count ? (
               <p className="basket-validation-note" role="alert">
@@ -213,11 +244,15 @@ export function AppShell({
               <button
                 type="button"
                 className="legacy-primary-button"
-                disabled={!basketIsValid}
+                disabled={!basketIsValid || preparing || prepared}
                 title="Purchase flow is not connected yet"
-                onClick={() => setPrepared(true)}
+                onClick={() => void preparePurchase()}
               >
-                Prepare purchase
+                {preparing
+                  ? "Preparing…"
+                  : prepared
+                    ? "Prepared"
+                    : "Prepare purchase"}
               </button>
             </footer>
           </section>

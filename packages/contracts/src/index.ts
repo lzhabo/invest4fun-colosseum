@@ -68,6 +68,38 @@ export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
 export type IdeasResponse = z.infer<typeof ideasResponseSchema>;
 
+export const basketEntryRequestSchema = z.object({
+  id: z.string().min(1),
+  kind: z.enum(["asset", "idea"]),
+  amountUsd: z.number().finite().min(0.1).max(1_000_000),
+});
+
+export const basketReviewRequestSchema = z.object({
+  items: z.array(basketEntryRequestSchema).min(1).max(50),
+});
+
+export const basketReviewResponseSchema = z.object({
+  basket: z.object({
+    id: z.string().uuid(),
+    status: z.literal("draft"),
+    totalUsd: z.number().nonnegative(),
+    items: z.array(
+      basketEntryRequestSchema.extend({
+        title: z.string().min(1),
+      }),
+    ),
+  }),
+  order: z.object({
+    id: z.string().uuid(),
+    status: z.literal("draft"),
+    idempotencyKey: z.string().min(1),
+  }),
+});
+
+export type BasketEntryRequest = z.infer<typeof basketEntryRequestSchema>;
+export type BasketReviewRequest = z.infer<typeof basketReviewRequestSchema>;
+export type BasketReviewResponse = z.infer<typeof basketReviewResponseSchema>;
+
 export const walletSummarySchema = z.object({
   id: z.string().uuid(),
   chain: z.literal("solana"),

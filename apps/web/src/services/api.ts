@@ -1,4 +1,7 @@
 import {
+  type BasketEntryRequest,
+  type BasketReviewResponse,
+  basketReviewResponseSchema,
   type FeedResponse,
   feedResponseSchema,
   type HealthResponse,
@@ -29,4 +32,21 @@ export function getFeed(signal?: AbortSignal): Promise<FeedResponse> {
 
 export function getIdeas(signal?: AbortSignal): Promise<IdeasResponse> {
   return getJson("/api/ideas", ideasResponseSchema.parse, signal);
+}
+
+export async function reviewBasket(
+  items: BasketEntryRequest[],
+  accessToken: string,
+): Promise<BasketReviewResponse> {
+  const response = await fetch("/api/baskets/review", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    body: JSON.stringify({ items }),
+  });
+  if (!response.ok) throw new Error("BASKET_REVIEW_FAILED");
+  return basketReviewResponseSchema.parse(await response.json());
 }
