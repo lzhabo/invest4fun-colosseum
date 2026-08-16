@@ -13,30 +13,131 @@ const baseAsset = {
   marketDataUpdatedAt: null,
 };
 
-const solana: FeedItem = {
-  ...baseAsset,
+function token(input: {
+  id: string;
+  mint: string | null;
+  coingeckoId: string;
+  symbol: string;
+  name: string;
+  rationale: string;
+  riskLabel: FeedItem["riskLabel"];
+}): FeedItem {
+  return {
+    ...baseAsset,
+    ...input,
+    assetType: "token",
+    sourceLabel: "Curated Solana catalog",
+  };
+}
+
+const solana = token({
   id: "solana",
   mint: "So11111111111111111111111111111111111111112",
   coingeckoId: "solana",
   symbol: "SOL",
   name: "Solana",
-  assetType: "token",
   rationale: "A core network asset for the Solana ecosystem.",
   riskLabel: "higher",
-  sourceLabel: "Curated ecosystem data",
-};
-const usdc: FeedItem = {
-  ...baseAsset,
+});
+const usdc = token({
   id: "usdc",
   mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   coingeckoId: "usd-coin",
   symbol: "USDC",
   name: "USD Coin",
-  assetType: "token",
   rationale: "A dollar-denominated settlement asset for the platform.",
   riskLabel: "lower",
-  sourceLabel: "Curated ecosystem data",
-};
+});
+const usdt = token({
+  id: "usdt",
+  mint: "Es9vMFrzaCERmJfrF4H2FYD4NQqvC8S1m7a2z1e6p2y",
+  coingeckoId: "tether",
+  symbol: "USDT",
+  name: "Tether",
+  rationale: "A second dollar-denominated liquidity and settlement asset.",
+  riskLabel: "lower",
+});
+const jupiter = token({
+  id: "jupiter",
+  mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+  coingeckoId: "jupiter-exchange-solana",
+  symbol: "JUP",
+  name: "Jupiter",
+  rationale: "The governance and ecosystem token of Solana's leading aggregator.",
+  riskLabel: "higher",
+});
+const jitoSol = token({
+  id: "jito-sol",
+  mint: "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+  coingeckoId: "jito-staked-sol",
+  symbol: "JitoSOL",
+  name: "Jito Staked SOL",
+  rationale: "A liquid-staking asset designed to keep SOL productive onchain.",
+  riskLabel: "higher",
+});
+const marinadeSol = token({
+  id: "marinade-sol",
+  mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+  coingeckoId: "msol",
+  symbol: "mSOL",
+  name: "Marinade Staked SOL",
+  rationale: "A liquid-staking asset providing diversified Solana exposure.",
+  riskLabel: "higher",
+});
+const dogwifhat = token({
+  id: "dogwifhat",
+  mint: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+  coingeckoId: "dogwifcoin",
+  symbol: "WIF",
+  name: "dogwifhat",
+  rationale: "A high-volatility meme asset from the Solana ecosystem.",
+  riskLabel: "higher",
+});
+const bonk = token({
+  id: "bonk",
+  mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
+  coingeckoId: "bonk",
+  symbol: "BONK",
+  name: "Bonk",
+  rationale: "A community-driven meme asset with high volatility.",
+  riskLabel: "higher",
+});
+const raydium = token({
+  id: "raydium",
+  mint: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+  coingeckoId: "raydium",
+  symbol: "RAY",
+  name: "Raydium",
+  rationale: "A DeFi infrastructure token tied to a major Solana venue.",
+  riskLabel: "higher",
+});
+const orca = token({
+  id: "orca",
+  mint: "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
+  coingeckoId: "orca",
+  symbol: "ORCA",
+  name: "Orca",
+  rationale: "A Solana DeFi token linked to an established liquidity protocol.",
+  riskLabel: "higher",
+});
+const kamino = token({
+  id: "kamino",
+  mint: "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
+  coingeckoId: "kamino",
+  symbol: "KMNO",
+  name: "Kamino",
+  rationale: "A DeFi infrastructure token from the Solana lending ecosystem.",
+  riskLabel: "higher",
+});
+const wrappedBitcoin = token({
+  id: "wrapped-bitcoin",
+  mint: "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+  coingeckoId: "coinbase-wrapped-btc",
+  symbol: "cbBTC",
+  name: "Coinbase Wrapped BTC",
+  rationale: "Bitcoin exposure represented as a Solana token.",
+  riskLabel: "higher",
+});
 const climateGrowth: FeedItem = {
   ...baseAsset,
   id: "climate-growth",
@@ -49,7 +150,21 @@ const climateGrowth: FeedItem = {
   sourceLabel: "Product prototype",
 };
 
-export const feedItems: FeedItem[] = [solana, usdc, climateGrowth];
+export const feedItems: FeedItem[] = [
+  solana,
+  usdc,
+  usdt,
+  wrappedBitcoin,
+  jupiter,
+  jitoSol,
+  marinadeSol,
+  raydium,
+  orca,
+  kamino,
+  dogwifhat,
+  bonk,
+  climateGrowth,
+];
 
 export const feedCatalog = new CuratedCatalogProvider(feedItems);
 
