@@ -1,6 +1,10 @@
 import type { FeedItem } from "@invest4fun/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { CoinGeckoMarketDataProvider } from "./market-data-provider.js";
+import {
+  CachedMarketDataProvider,
+  CoinGeckoMarketDataProvider,
+  ResilientMarketDataProvider,
+} from "./market-data-provider.js";
 
 const item: FeedItem = {
   id: "solana",
@@ -40,5 +44,49 @@ describe("CoinGeckoMarketDataProvider", () => {
     expect(result?.priceUsd).toBe(180.5);
     expect(result?.priceChange24hPct).toBe(4.2);
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("caches the same catalog and deduplicates concurrent requests", async () => {
+    let now = 1_000;
+    let calls = 0;
+    const provider = {
+      enrich: vi.fn(async (items: FeedItem[]) => {
+        calls += 1;
+        await Promise.resolve();
+        return items.map((item) => ({
+          ...item,
+          priceUsd: 180,
+          marketDataSource: "coingecko" as const,
+          marketDataUpdatedAt: new Date(now).toISOString(),
+        }));
+      }),
+    };
+    const cached = new CachedMarketDataProvider(provider, 60_000, () => now);
+
+    const [first, second] = await Promise.all([
+      cached.enrich([item]),
+      cached.enrich([item]),
+    ]);
+    await cached.enrich([item]);
+
+    expect(calls).toBe(1);
+    expect(first[0]?.priceUsd).toBe(180);
+    expect(second[0]?.priceUsd).toBe(180);
+
+    now += 60_001;
+    await cached.enrich([item]);
+    expect(calls).toBe(2);
+  });
+
+  it("falls back to curated items when market data is unavailable", async () => {
+    const provider = new ResilientMarketDataProvider({
+      enrich: async () => {
+        throw new Error("COINGECKO_OFFLINE");
+      },
+    });
+
+    const [result] = await provider.enrich([item]);
+
+    expect(result).toEqual(item);
   });
 });

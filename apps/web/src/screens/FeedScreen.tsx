@@ -118,6 +118,20 @@ const FeedHeading = styled.header`
   }
 `;
 
+const FeedStatus = styled.div`
+  min-height: 420px;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  color: var(--muted);
+  text-align: center;
+
+  strong {
+    color: var(--ink);
+    font: 24px / 1.1 var(--font-brand);
+  }
+`;
+
 type Feedback = "invest" | "skip";
 
 const SwipeCard = styled.article<{
@@ -217,6 +231,7 @@ const RiskLabel = styled.span<{ $risk: FeedItem["riskLabel"] }>`
 
 export function FeedScreen() {
   const [feed, setFeed] = useState<FeedItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [ticketAmount, setTicketAmount] = useState(10);
   const [feedback, setFeedback] = useState<Feedback>();
@@ -234,7 +249,8 @@ export function FeedScreen() {
         if (reason instanceof DOMException && reason.name === "AbortError")
           return;
         setError(true);
-      });
+      })
+      .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
 
@@ -352,7 +368,12 @@ export function FeedScreen() {
               ) : null}
             </FeedHeading>
 
-            {active ? (
+            {loading ? (
+              <FeedStatus role="status" aria-live="polite">
+                <strong>Building your feed</strong>
+                <span>Loading current market positions...</span>
+              </FeedStatus>
+            ) : active ? (
               <div className="feed-card-stage">
                 <button
                   type="button"

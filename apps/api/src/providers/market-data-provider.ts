@@ -17,6 +17,65 @@ export interface MarketDataProvider {
   enrich(items: FeedItem[]): Promise<FeedItem[]>;
 }
 
+export class CachedMarketDataProvider implements MarketDataProvider {
+  private cached:
+    | { key: string; expiresAt: number; items: FeedItem[] }
+    | undefined;
+  private inFlight: { key: string; promise: Promise<FeedItem[]> } | undefined;
+
+  constructor(
+    private readonly provider: MarketDataProvider,
+    private readonly ttlMs = 60_000,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  enrich(items: FeedItem[]) {
+    const key = items
+      .map((item) => item.coingeckoId ?? item.id)
+      .sort()
+      .join(",");
+
+    if (
+      this.cached &&
+      this.cached.key === key &&
+      this.cached.expiresAt > this.now()
+    ) {
+      return Promise.resolve(this.cached.items.map((item) => ({ ...item })));
+    }
+
+    if (this.inFlight?.key === key) return this.inFlight.promise;
+
+    const promise = this.provider
+      .enrich(items)
+      .then((enriched) => {
+        this.cached = {
+          key,
+          expiresAt: this.now() + this.ttlMs,
+          items: enriched.map((item) => ({ ...item })),
+        };
+        return enriched;
+      })
+      .finally(() => {
+        if (this.inFlight?.key === key) this.inFlight = undefined;
+      });
+
+    this.inFlight = { key, promise };
+    return promise;
+  }
+}
+
+export class ResilientMarketDataProvider implements MarketDataProvider {
+  constructor(private readonly provider: MarketDataProvider) {}
+
+  async enrich(items: FeedItem[]) {
+    try {
+      return await this.provider.enrich(items);
+    } catch {
+      return items.map((item) => ({ ...item }));
+    }
+  }
+}
+
 export class EnrichedCatalogProvider implements FeedCatalogProvider {
   constructor(
     private readonly catalog: FeedCatalogProvider,
@@ -31,9 +90,9 @@ export class EnrichedCatalogProvider implements FeedCatalogProvider {
 
 export class CoinGeckoMarketDataProvider implements MarketDataProvider {
   constructor(
-    private readonly apiKey: string,
+    private readonly apiKey: string | undefined,
     private readonly fetcher: typeof fetch = fetch,
-    private readonly baseUrl = "https://pro-api.coingecko.com/api/v3",
+    private readonly baseUrl = "https://api.coingecko.com/api/v3",
   ) {}
 
   async enrich(items: FeedItem[]) {
@@ -51,7 +110,7 @@ export class CoinGeckoMarketDataProvider implements MarketDataProvider {
     url.searchParams.set("include_last_updated_at", "true");
 
     const response = await this.fetcher(url, {
-      headers: { "x-cg-pro-api-key": this.apiKey },
+      ...(this.apiKey ? { headers: { "x-cg-demo-api-key": this.apiKey } } : {}),
       signal: AbortSignal.timeout(8_000),
     });
     if (!response.ok) throw new Error(`COINGECKO_MARKET_${response.status}`);

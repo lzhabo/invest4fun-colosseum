@@ -1,8 +1,10 @@
 import type { FeedItem, Idea } from "@invest4fun/contracts";
 import { CuratedCatalogProvider } from "./providers/catalog-provider.js";
 import {
+  CachedMarketDataProvider,
   CoinGeckoMarketDataProvider,
   EnrichedCatalogProvider,
+  ResilientMarketDataProvider,
 } from "./providers/market-data-provider.js";
 
 const baseAsset = {
@@ -53,11 +55,12 @@ export const feedCatalog = new CuratedCatalogProvider(feedItems);
 
 export function createFeedCatalog(coingeckoApiKey?: string) {
   const curated = new CuratedCatalogProvider(feedItems);
-  if (!coingeckoApiKey) return curated;
-  return new EnrichedCatalogProvider(
-    curated,
-    new CoinGeckoMarketDataProvider(coingeckoApiKey),
+  const marketData = new CachedMarketDataProvider(
+    new ResilientMarketDataProvider(
+      new CoinGeckoMarketDataProvider(coingeckoApiKey),
+    ),
   );
+  return new EnrichedCatalogProvider(curated, marketData);
 }
 
 export const ideas: Idea[] = [

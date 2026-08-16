@@ -16,7 +16,7 @@ import { reviewBasket } from "../../services/api";
 import { useBasket } from "../../state/basket-context";
 import { WalletMenu } from "./WalletMenu";
 
-export type AppView = "feed" | "ideas" | "portfolio" | "account";
+export type AppView = "feed" | "ideas" | "portfolio" | "account" | "activity";
 
 const navigation = [
   { id: "feed", label: "Feed", Icon: GalleryVerticalEnd },
