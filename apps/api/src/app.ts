@@ -346,16 +346,31 @@ export function createApp(
       });
     }
 
-    const basket = await database.query<{ id: string }>(
-      `insert into app.baskets (user_id, status) values ($1, 'draft') returning id`,
+    const draftBasket = await database.query<{ id: string }>(
+      `
+        select id
+        from app.baskets
+        where user_id = $1 and status = 'draft'
+        order by updated_at desc
+        limit 1
+      `,
       [userId],
     );
+    const basket = draftBasket.rows[0]
+      ? draftBasket
+      : await database.query<{ id: string }>(
+          `insert into app.baskets (user_id, status) values ($1, 'draft') returning id`,
+          [userId],
+        );
     const basketId = basket.rows[0]?.id;
     if (!basketId) {
       response.status(500).json({ error: "BASKET_CREATE_FAILED" });
       return;
     }
 
+    await database.query(`delete from app.basket_items where basket_id = $1`, [
+      basketId,
+    ]);
     for (const item of validItems) {
       await database.query(
         `
@@ -366,6 +381,10 @@ export function createApp(
         [basketId, item.kind, item.id, item.title, item.amountCents],
       );
     }
+    await database.query(
+      `update app.baskets set updated_at = now() where id = $1`,
+      [basketId],
+    );
 
     const order = await database.query<{ id: string }>(
       `

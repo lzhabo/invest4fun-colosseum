@@ -1,3 +1,4 @@
+import type { BasketReviewResponse } from "@invest4fun/contracts";
 import {
   BriefcaseBusiness,
   CircleUserRound,
@@ -42,9 +43,11 @@ export function AppShell({
 }) {
   const auth = useAuth();
   const basket = useBasket();
-  const [prepared, setPrepared] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [prepareError, setPrepareError] = useState<string | null>(null);
+  const [preparedReview, setPreparedReview] = useState<
+    BasketReviewResponse | undefined
+  >();
   const basketTotal = basket.entries.reduce(
     (total, entry) => total + (entry.amountUsd ?? 0),
     0,
@@ -55,13 +58,26 @@ export function AppShell({
       (entry) => Number.isFinite(entry.amountUsd) && entry.amountUsd >= 0.1,
     );
 
+  const preparedForCurrentBasket = Boolean(
+    preparedReview &&
+      preparedReview.basket.items.length === basket.entries.length &&
+      preparedReview.basket.items.every((item, index) => {
+        const entry = basket.entries[index];
+        return (
+          item.id === entry?.id &&
+          item.kind === entry?.kind &&
+          item.amountUsd === entry?.amountUsd
+        );
+      }),
+  );
+
   async function preparePurchase() {
     setPrepareError(null);
     setPreparing(true);
     try {
       const accessToken = await auth.getAccessToken();
       if (!accessToken) throw new Error("AUTH_REQUIRED");
-      await reviewBasket(
+      const review = await reviewBasket(
         basket.entries.map(({ id, kind, amountUsd }) => ({
           id,
           kind,
@@ -69,7 +85,7 @@ export function AppShell({
         })),
         accessToken,
       );
-      setPrepared(true);
+      setPreparedReview(review);
     } catch {
       setPrepareError(
         "We could not prepare this basket. Check your session and try again.",
@@ -241,10 +257,11 @@ export function AppShell({
                     <strong>${basketTotal.toFixed(2)}</strong>
                   </div>
                 ) : null}
-                {prepared ? (
+                {preparedForCurrentBasket && preparedReview ? (
                   <p className="basket-prepared-note" role="status">
-                    Draft order prepared on the server. Wallet signing will be
-                    connected in the Jupiter execution phase.
+                    Draft order <strong>{preparedReview.order.id}</strong> is
+                    prepared on the server. Wallet signing will be connected in
+                    the Jupiter execution phase.
                   </p>
                 ) : prepareError ? (
                   <p className="basket-validation-note" role="alert">
@@ -304,13 +321,15 @@ export function AppShell({
               <button
                 type="button"
                 className="legacy-primary-button"
-                disabled={!basketIsValid || preparing || prepared}
+                disabled={
+                  !basketIsValid || preparing || preparedForCurrentBasket
+                }
                 title="Purchase flow is not connected yet"
                 onClick={() => void preparePurchase()}
               >
                 {preparing
                   ? "Preparing…"
-                  : prepared
+                  : preparedForCurrentBasket
                     ? "Prepared"
                     : "Prepare purchase"}
               </button>
