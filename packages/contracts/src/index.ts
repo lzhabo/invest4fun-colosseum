@@ -105,6 +105,10 @@ export const basketReviewRequestSchema = z.object({
   items: z.array(basketEntryRequestSchema).min(1).max(50),
 });
 
+export const basketDraftRequestSchema = z.object({
+  items: z.array(basketEntryRequestSchema).max(50),
+});
+
 export const basketReviewResponseSchema = z.object({
   basket: z.object({
     id: z.string().uuid(),
@@ -123,9 +127,26 @@ export const basketReviewResponseSchema = z.object({
   }),
 });
 
+export const basketDraftSchema = z.object({
+  id: z.string().uuid(),
+  status: z.literal("draft"),
+  totalUsd: z.number().nonnegative(),
+  items: z.array(
+    basketEntryRequestSchema.extend({
+      title: z.string().min(1),
+    }),
+  ),
+});
+
+export const basketDraftResponseSchema = z.object({
+  basket: basketDraftSchema.nullable(),
+});
+
 export type BasketEntryRequest = z.infer<typeof basketEntryRequestSchema>;
 export type BasketReviewRequest = z.infer<typeof basketReviewRequestSchema>;
 export type BasketReviewResponse = z.infer<typeof basketReviewResponseSchema>;
+export type BasketDraft = z.infer<typeof basketDraftSchema>;
+export type BasketDraftResponse = z.infer<typeof basketDraftResponseSchema>;
 
 export const walletSummarySchema = z.object({
   id: z.string().uuid(),

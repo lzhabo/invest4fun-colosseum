@@ -1,8 +1,10 @@
 import {
   type AssetDetailsResponse,
   assetDetailsResponseSchema,
+  type BasketDraftResponse,
   type BasketEntryRequest,
   type BasketReviewResponse,
+  basketDraftResponseSchema,
   basketReviewResponseSchema,
   type FeedResponse,
   feedResponseSchema,
@@ -77,4 +79,30 @@ export async function reviewBasket(
   });
   if (!response.ok) throw new Error("BASKET_REVIEW_FAILED");
   return basketReviewResponseSchema.parse(await response.json());
+}
+
+export async function getDraftBasket(
+  accessToken: string,
+): Promise<BasketDraftResponse> {
+  const response = await fetch("/api/baskets/draft", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error("BASKET_DRAFT_LOAD_FAILED");
+  return basketDraftResponseSchema.parse(await response.json());
+}
+
+export async function saveDraftBasket(
+  items: BasketEntryRequest[],
+  accessToken: string,
+): Promise<BasketDraftResponse> {
+  const response = await fetch("/api/baskets/draft", {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ items }),
+  });
+  if (!response.ok) throw new Error("BASKET_DRAFT_SAVE_FAILED");
+  return basketDraftResponseSchema.parse(await response.json());
 }

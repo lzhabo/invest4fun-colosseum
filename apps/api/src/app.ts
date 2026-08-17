@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  basketDraftRequestSchema,
   basketReviewRequestSchema,
   marketChartPeriodSchema,
 } from "@invest4fun/contracts";
@@ -131,6 +132,122 @@ export function createApp(
   app.get("/api/ideas", (_request, response) =>
     response.json({ items: ideas }),
   );
+
+  app.get("/api/baskets/draft", async (request, response) => {
+    const userId = await resolveInternalUserId(database, request);
+    if (!userId) {
+      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      return;
+    }
+
+    const draft = await database.query<{
+      id: string;
+      status: "draft";
+    }>(
+      `
+        select id, status
+        from app.baskets
+        where user_id = $1 and status = 'draft'
+        order by updated_at desc
+        limit 1
+      `,
+      [userId],
+    );
+    if (!draft.rows[0]) return response.json({ basket: null });
+
+    return response.json({
+      basket: await readDraftBasket(database, draft.rows[0].id),
+    });
+  });
+
+  app.put("/api/baskets/draft", async (request, response) => {
+    const userId = await resolveInternalUserId(database, request);
+    if (!userId) {
+      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      return;
+    }
+
+    const parsed = basketDraftRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      response.status(400).json({
+        error: "INVALID_BASKET_DRAFT",
+        message: "Basket items and amounts are invalid.",
+      });
+      return;
+    }
+
+    const resolvedItems = parsed.data.items.map((item) => {
+      const catalogItem =
+        item.kind === "asset"
+          ? feedItems.find((asset) => asset.id === item.id)
+          : ideas.find((idea) => idea.id === item.id);
+      return catalogItem
+        ? {
+            ...item,
+            title:
+              item.kind === "asset"
+                ? (catalogItem as (typeof feedItems)[number]).name
+                : (catalogItem as (typeof ideas)[number]).title,
+            amountCents: Math.round(item.amountUsd * 100),
+          }
+        : null;
+    });
+
+    if (resolvedItems.some((item) => item === null)) {
+      response.status(400).json({
+        error: "BASKET_ITEM_NOT_ELIGIBLE",
+        message: "One or more basket items are no longer eligible.",
+      });
+      return;
+    }
+
+    const validItems = resolvedItems.filter(
+      (item): item is NonNullable<typeof item> => item !== null,
+    );
+    const existing = await database.query<{ id: string }>(
+      `
+        select id
+        from app.baskets
+        where user_id = $1 and status = 'draft'
+        order by updated_at desc
+        limit 1
+      `,
+      [userId],
+    );
+    const basketId =
+      existing.rows[0]?.id ??
+      (
+        await database.query<{ id: string }>(
+          `insert into app.baskets (user_id, status) values ($1, 'draft') returning id`,
+          [userId],
+        )
+      ).rows[0]?.id;
+
+    if (!basketId) {
+      response.status(500).json({ error: "BASKET_DRAFT_SAVE_FAILED" });
+      return;
+    }
+
+    await database.query(`delete from app.basket_items where basket_id = $1`, [
+      basketId,
+    ]);
+    for (const item of validItems) {
+      await database.query(
+        `
+          insert into app.basket_items
+            (basket_id, source_kind, source_id, title_snapshot, amount_cents)
+          values ($1, $2, $3, $4, $5)
+        `,
+        [basketId, item.kind, item.id, item.title, item.amountCents],
+      );
+    }
+    await database.query(
+      `update app.baskets set updated_at = now() where id = $1`,
+      [basketId],
+    );
+
+    return response.json({ basket: await readDraftBasket(database, basketId) });
+  });
 
   app.post("/api/baskets/review", async (request, response) => {
     const userId = await resolveInternalUserId(database, request);
@@ -312,6 +429,36 @@ export function createApp(
   });
 
   return app;
+}
+
+async function readDraftBasket(database: Database, basketId: string) {
+  const items = await database.query<{
+    source_kind: "asset" | "idea";
+    source_id: string;
+    title_snapshot: string;
+    amount_cents: number;
+  }>(
+    `
+      select source_kind, source_id, title_snapshot, amount_cents
+      from app.basket_items
+      where basket_id = $1
+      order by created_at asc
+    `,
+    [basketId],
+  );
+
+  return {
+    id: basketId,
+    status: "draft" as const,
+    totalUsd:
+      items.rows.reduce((total, item) => total + item.amount_cents, 0) / 100,
+    items: items.rows.map((item) => ({
+      id: item.source_id,
+      kind: item.source_kind,
+      title: item.title_snapshot,
+      amountUsd: item.amount_cents / 100,
+    })),
+  };
 }
 
 function orderFeedItems(items: typeof feedItems, seed: string) {
