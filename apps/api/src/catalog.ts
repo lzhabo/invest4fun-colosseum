@@ -1,5 +1,6 @@
 import type { FeedItem, Idea } from "@invest4fun/contracts";
 import { CuratedCatalogProvider } from "./providers/catalog-provider.js";
+import { CuratedIdeasProvider } from "./providers/ideas-provider.js";
 import {
   CachedMarketDataProvider,
   CoinGeckoMarketDataProvider,
@@ -53,6 +54,23 @@ function token(input: {
 
 function canonicalAssetId(mint: string) {
   return `solana:${mint}`;
+}
+
+function ideaComponent(
+  asset: FeedItem,
+  weightBps: number,
+  order: number,
+  rationale: string,
+) {
+  return {
+    assetId: asset.canonicalId,
+    symbol: asset.symbol,
+    name: asset.name,
+    iconUrl: asset.iconUrl ?? null,
+    weightBps,
+    order,
+    rationale,
+  };
 }
 
 const solana = token({
@@ -226,15 +244,55 @@ export const ideas: Idea[] = [
   {
     id: "steady-start",
     title: "Steady start",
+    subtitle: "Dollar-denominated starter allocation",
     description: "A lower-volatility starting idea for a first basket.",
+    details:
+      "A single-asset starter composition for users who want a conservative first allocation while the broader Ideas catalog is being built.",
     riskLabel: "lower",
-    positions: [usdc],
+    status: "active",
+    minimumInvestmentCents: 1_000,
+    source: {
+      type: "curated",
+      label: "Invest4Fun curated catalog",
+      url: null,
+    },
+    version: {
+      id: "steady-start:v1",
+      version: 1,
+      effectiveAt: catalogCheckedAt,
+      totalWeightBps: 10_000,
+      components: [
+        ideaComponent(usdc, 10_000, 0, "Dollar-denominated settlement asset."),
+      ],
+    },
   },
   {
     id: "solana-builder",
     title: "Solana builder",
+    subtitle: "Core Solana ecosystem mix",
     description: "A concentrated ecosystem idea with more movement over time.",
+    details:
+      "A curated composition of Solana network and ecosystem assets intended for higher-volatility discovery.",
     riskLabel: "higher",
-    positions: [solana],
+    status: "active",
+    minimumInvestmentCents: 3_000,
+    source: {
+      type: "curated",
+      label: "Invest4Fun curated catalog",
+      url: null,
+    },
+    version: {
+      id: "solana-builder:v1",
+      version: 1,
+      effectiveAt: catalogCheckedAt,
+      totalWeightBps: 10_000,
+      components: [
+        ideaComponent(solana, 6_000, 0, "Core network exposure."),
+        ideaComponent(jupiter, 2_000, 1, "Aggregator ecosystem exposure."),
+        ideaComponent(jitoSol, 2_000, 2, "Liquid-staking ecosystem exposure."),
+      ],
+    },
   },
 ];
+
+export const ideaCatalog = new CuratedIdeasProvider(ideas);

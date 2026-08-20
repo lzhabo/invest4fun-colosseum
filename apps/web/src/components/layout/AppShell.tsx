@@ -205,7 +205,10 @@ export function AppShell({
                       <span>Input (you pay)</span>
                     </div>
                     {basket.entries.map((entry) => (
-                      <div className="basket-dialog-item" key={entry.id}>
+                      <div
+                        className="basket-dialog-item"
+                        key={`${entry.kind}:${entry.id}`}
+                      >
                         <div>
                           <strong>{entry.title}</strong>
                           <small>
@@ -231,7 +234,7 @@ export function AppShell({
                             }
                             onChange={(event) =>
                               basket.updateAmount(
-                                entry.id,
+                                entry,
                                 Number(event.target.value),
                               )
                             }
@@ -241,7 +244,7 @@ export function AppShell({
                           type="button"
                           aria-label={`Remove ${entry.title} from basket`}
                           title="Remove from basket"
-                          onClick={() => basket.remove(entry.id)}
+                          onClick={() => basket.remove(entry)}
                         >
                           <Trash2 aria-hidden="true" />
                         </button>

@@ -4,7 +4,7 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { bootstrapAccount } from "./account-bootstrap.js";
 import { type AuthProvider, AuthTokenError, createApp } from "./app.js";
-import { feedItems } from "./catalog.js";
+import { feedItems, ideas } from "./catalog.js";
 
 function database(ping: () => Promise<void>, query = vi.fn()): Database {
   return { ping, query, close: vi.fn() };
@@ -304,6 +304,147 @@ describe("auth bootstrap", () => {
       expect.stringContaining("insert into app.basket_items"),
       expect.anything(),
     );
+  });
+
+  it("returns versioned investment ideas", async () => {
+    const response = await request(createApp(database(vi.fn()))).get(
+      "/api/ideas",
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.items[0]).toMatchObject({
+      id: "steady-start",
+      status: "active",
+      minimumInvestmentCents: 1000,
+      version: {
+        id: "steady-start:v1",
+        totalWeightBps: 10000,
+      },
+    });
+    expect(response.body.items[0].version.components[0]).toMatchObject({
+      assetId: expect.stringMatching(/^solana:/),
+      weightBps: 10000,
+      order: 0,
+    });
+  });
+
+  it("rejects ideas with non-executable holdings during basket review", async () => {
+    const selectedIdea = ideas[0];
+    const component = selectedIdea?.version.components[0];
+    if (!selectedIdea || !component) throw new Error("IDEA_FIXTURE_MISSING");
+    const disabledCatalog = feedItems.map((asset) =>
+      asset.id === component.assetId
+        ? {
+            ...asset,
+            eligibility: {
+              ...asset.eligibility,
+              tradable: false as const,
+              executable: false as const,
+              reasonCodes: ["provider_disabled"],
+            },
+          }
+        : asset,
+    );
+    const response = await request(
+      createApp(
+        database(vi.fn()),
+        { getItems: vi.fn(async () => disabledCatalog) },
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .post("/api/baskets/review")
+      .set("Authorization", "Bearer verified-token")
+      .set("Idempotency-Key", "r3-idea-holding-safety")
+      .send({
+        items: [{ id: selectedIdea.id, kind: "idea", amountUsd: 50 }],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+  });
+
+  it("rejects ideas whose holdings are absent from the injected catalog", async () => {
+    const selectedIdea = ideas[0];
+    if (!selectedIdea) throw new Error("IDEA_FIXTURE_MISSING");
+    const response = await request(
+      createApp(
+        database(vi.fn()),
+        { getItems: vi.fn(async () => []) },
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .put("/api/baskets/draft")
+      .set("Authorization", "Bearer verified-token")
+      .send({
+        items: [{ id: selectedIdea.id, kind: "idea", amountUsd: 50 }],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+  });
+
+  it("stores selected idea version and snapshot during basket draft save", async () => {
+    const selectedIdea = ideas[0];
+    if (!selectedIdea) throw new Error("IDEA_FIXTURE_MISSING");
+    const insertValues: (readonly unknown[])[] = [];
+    const query = vi.fn(async (text: string, values?: readonly unknown[]) => {
+      if (text.includes("insert into app.baskets")) {
+        return {
+          rows: [{ id: "44444444-4444-4444-8444-444444444444" }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("insert into app.basket_items")) {
+        insertValues.push(values ?? []);
+      }
+      if (text.includes("select source_kind")) {
+        return {
+          rows: [
+            {
+              source_kind: "idea",
+              source_id: selectedIdea.id,
+              title_snapshot: selectedIdea.title,
+              amount_cents: 5000,
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+
+    const response = await request(
+      createApp(
+        database(vi.fn(), query),
+        undefined,
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .put("/api/baskets/draft")
+      .set("Authorization", "Bearer verified-token")
+      .send({
+        items: [{ id: selectedIdea.id, kind: "idea", amountUsd: 50 }],
+      });
+
+    expect(response.status).toBe(200);
+    expect(insertValues[0]?.[3]).toBe(selectedIdea.version.id);
+    expect(JSON.parse(String(insertValues[0]?.[5]))).toMatchObject({
+      type: "idea",
+      ideaId: selectedIdea.id,
+      ideaVersionId: selectedIdea.version.id,
+      components: [
+        {
+          assetId: selectedIdea.version.components[0]?.assetId,
+          weightBps: selectedIdea.version.components[0]?.weightBps,
+        },
+      ],
+    });
   });
 });
 

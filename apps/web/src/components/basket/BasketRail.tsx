@@ -220,7 +220,7 @@ export function BasketRail() {
       {basket.entries.length ? (
         <RailList>
           {basket.entries.map((entry) => (
-            <RailRow key={entry.id}>
+            <RailRow key={`${entry.kind}:${entry.id}`}>
               <RailMark>{entry.title.slice(0, 2).toUpperCase()}</RailMark>
               <RailCopy>
                 <strong>{entry.title}</strong>
@@ -233,7 +233,7 @@ export function BasketRail() {
               <RemoveButton
                 type="button"
                 aria-label={`Remove ${entry.title} from basket`}
-                onClick={() => basket.remove(entry.id)}
+                onClick={() => basket.remove(entry)}
               >
                 <X aria-hidden="true" />
               </RemoveButton>
