@@ -7,15 +7,26 @@ import {
   ResilientMarketDataProvider,
 } from "./providers/market-data-provider.js";
 
+const catalogPolicyVersion = "catalog-r2-2026-08-20";
+const catalogCheckedAt = "2026-08-20T00:00:00.000Z";
+
 const baseAsset = {
   chain: "solana" as const,
   marketDataSource: "curated" as const,
   marketDataUpdatedAt: null,
+  marketDataStatus: "unavailable" as const,
+  marketDataAsOf: null,
+  marketDataExpiresAt: null,
+  market: {
+    source: "curated" as const,
+    status: "unavailable" as const,
+    asOf: null,
+    expiresAt: null,
+  },
 };
 
 function token(input: {
-  id: string;
-  mint: string | null;
+  mint: string;
   coingeckoId: string;
   symbol: string;
   name: string;
@@ -26,13 +37,25 @@ function token(input: {
   return {
     ...baseAsset,
     ...input,
+    id: canonicalAssetId(input.mint),
+    canonicalId: canonicalAssetId(input.mint),
     assetType: "token",
+    eligibility: {
+      tradable: true,
+      executable: true,
+      reasonCodes: [],
+      policyVersion: catalogPolicyVersion,
+      checkedAt: catalogCheckedAt,
+    },
     sourceLabel: "Curated Solana catalog",
   };
 }
 
+function canonicalAssetId(mint: string) {
+  return `solana:${mint}`;
+}
+
 const solana = token({
-  id: "solana",
   mint: "So11111111111111111111111111111111111111112",
   coingeckoId: "solana",
   symbol: "SOL",
@@ -43,7 +66,6 @@ const solana = token({
   riskLabel: "higher",
 });
 const usdc = token({
-  id: "usdc",
   mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
   coingeckoId: "usd-coin",
   symbol: "USDC",
@@ -54,7 +76,6 @@ const usdc = token({
   riskLabel: "lower",
 });
 const usdt = token({
-  id: "usdt",
   mint: "Es9vMFrzaCERmJfrF4H2FYD4NQqvC8S1m7a2z1e6p2y",
   coingeckoId: "tether",
   symbol: "USDT",
@@ -64,7 +85,6 @@ const usdt = token({
   riskLabel: "lower",
 });
 const jupiter = token({
-  id: "jupiter",
   mint: "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
   coingeckoId: "jupiter-exchange-solana",
   symbol: "JUP",
@@ -75,7 +95,6 @@ const jupiter = token({
   riskLabel: "higher",
 });
 const jitoSol = token({
-  id: "jito-sol",
   mint: "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
   coingeckoId: "jito-staked-sol",
   symbol: "JitoSOL",
@@ -85,7 +104,6 @@ const jitoSol = token({
   riskLabel: "higher",
 });
 const marinadeSol = token({
-  id: "marinade-sol",
   mint: "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
   coingeckoId: "msol",
   symbol: "mSOL",
@@ -96,7 +114,6 @@ const marinadeSol = token({
   riskLabel: "higher",
 });
 const dogwifhat = token({
-  id: "dogwifhat",
   mint: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
   coingeckoId: "dogwifcoin",
   symbol: "WIF",
@@ -107,7 +124,6 @@ const dogwifhat = token({
   riskLabel: "higher",
 });
 const bonk = token({
-  id: "bonk",
   mint: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263",
   coingeckoId: "bonk",
   symbol: "BONK",
@@ -117,7 +133,6 @@ const bonk = token({
   riskLabel: "higher",
 });
 const raydium = token({
-  id: "raydium",
   mint: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
   coingeckoId: "raydium",
   symbol: "RAY",
@@ -128,7 +143,6 @@ const raydium = token({
   riskLabel: "higher",
 });
 const orca = token({
-  id: "orca",
   mint: "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE",
   coingeckoId: "orca",
   symbol: "ORCA",
@@ -139,7 +153,6 @@ const orca = token({
   riskLabel: "higher",
 });
 const kamino = token({
-  id: "kamino",
   mint: "KMNo3nJsBXfcpJTVhZcXLW7RmTwTt4GVFE7suUBo9sS",
   coingeckoId: "kamino",
   symbol: "KMNO",
@@ -149,7 +162,6 @@ const kamino = token({
   riskLabel: "higher",
 });
 const wrappedBitcoin = token({
-  id: "wrapped-bitcoin",
   mint: "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
   coingeckoId: "coinbase-wrapped-btc",
   symbol: "cbBTC",
@@ -161,7 +173,8 @@ const wrappedBitcoin = token({
 });
 const climateGrowth: FeedItem = {
   ...baseAsset,
-  id: "climate-growth",
+  id: "product-placeholder:clmt",
+  canonicalId: "product-placeholder:clmt",
   mint: null,
   symbol: "CLMT",
   name: "Climate Growth Basket",
@@ -169,6 +182,13 @@ const climateGrowth: FeedItem = {
   rationale: "A placeholder equity idea for the future multi-asset universe.",
   riskLabel: "medium",
   sourceLabel: "Product prototype",
+  eligibility: {
+    tradable: false,
+    executable: false,
+    reasonCodes: ["placeholder", "non_solana_asset"],
+    policyVersion: catalogPolicyVersion,
+    checkedAt: catalogCheckedAt,
+  },
 };
 
 export const feedItems: FeedItem[] = [
@@ -191,9 +211,12 @@ export const feedCatalog = new CuratedCatalogProvider(feedItems);
 
 export function createFeedCatalog(coingeckoApiKey?: string) {
   const curated = new CuratedCatalogProvider(feedItems);
-  const marketData = new CachedMarketDataProvider(
-    new ResilientMarketDataProvider(
+  const marketData = new ResilientMarketDataProvider(
+    new CachedMarketDataProvider(
       new CoinGeckoMarketDataProvider(coingeckoApiKey),
+      60_000,
+      Date.now,
+      "coingecko",
     ),
   );
   return new EnrichedCatalogProvider(curated, marketData);

@@ -25,6 +25,7 @@ export interface MarketDataProvider {
 export interface MarketChartProvider {
   getHistory(
     assetId: string,
+    coingeckoId: string,
     period: MarketChartPeriod,
   ): Promise<MarketChartResponse>;
 }
@@ -46,11 +47,19 @@ export class CachedMarketDataProvider implements MarketDataProvider {
     private readonly provider: MarketDataProvider,
     private readonly ttlMs = 60_000,
     private readonly now: () => number = Date.now,
+    private readonly cacheNamespace = "market",
   ) {}
 
   enrich(items: FeedItem[]) {
     const key = items
-      .map((item) => item.coingeckoId ?? item.id)
+      .map((item) =>
+        [
+          this.cacheNamespace,
+          item.chain,
+          item.mint ?? item.canonicalId,
+          item.coingeckoId ?? "no-provider-id",
+        ].join(":"),
+      )
       .sort()
       .join(",");
 
@@ -74,6 +83,22 @@ export class CachedMarketDataProvider implements MarketDataProvider {
         };
         return enriched;
       })
+      .catch((error: unknown) => {
+        if (this.cached?.key === key) {
+          const expiresAt = new Date(this.cached.expiresAt).toISOString();
+          return this.cached.items.map((item) => ({
+            ...item,
+            marketDataStatus: "stale" as const,
+            marketDataExpiresAt: expiresAt,
+            market: {
+              ...item.market,
+              status: "stale" as const,
+              expiresAt,
+            },
+          }));
+        }
+        throw error;
+      })
       .finally(() => {
         if (this.inFlight?.key === key) this.inFlight = undefined;
       });
@@ -90,7 +115,14 @@ export class ResilientMarketDataProvider implements MarketDataProvider {
     try {
       return await this.provider.enrich(items);
     } catch {
-      return items.map((item) => ({ ...item }));
+      return items.map((item) => ({
+        ...item,
+        marketDataStatus: "degraded" as const,
+        market: {
+          ...item.market,
+          status: "degraded" as const,
+        },
+      }));
     }
   }
 }
@@ -165,12 +197,23 @@ export class CoinGeckoMarketDataProvider
         ? marketData[item.coingeckoId]
         : undefined;
       if (!snapshot) return item;
+      const asOf = snapshot.last_updated_at
+        ? new Date(snapshot.last_updated_at * 1_000).toISOString()
+        : new Date().toISOString();
+      const expiresAt = new Date(Date.now() + 60_000).toISOString();
       return {
         ...item,
         marketDataSource: "coingecko" as const,
-        marketDataUpdatedAt: snapshot.last_updated_at
-          ? new Date(snapshot.last_updated_at * 1_000).toISOString()
-          : new Date().toISOString(),
+        marketDataStatus: "fresh" as const,
+        marketDataUpdatedAt: asOf,
+        marketDataAsOf: asOf,
+        marketDataExpiresAt: expiresAt,
+        market: {
+          source: "coingecko" as const,
+          status: "fresh" as const,
+          asOf,
+          expiresAt,
+        },
         priceUsd: snapshot.usd ?? null,
         marketCapUsd: snapshot.usd_market_cap ?? null,
         volume24hUsd: snapshot.usd_24h_vol ?? null,
@@ -179,8 +222,12 @@ export class CoinGeckoMarketDataProvider
     });
   }
 
-  async getHistory(assetId: string, period: MarketChartPeriod) {
-    const url = new URL(`${this.baseUrl}/coins/${assetId}/market_chart`);
+  async getHistory(
+    assetId: string,
+    coingeckoId: string,
+    period: MarketChartPeriod,
+  ) {
+    const url = new URL(`${this.baseUrl}/coins/${coingeckoId}/market_chart`);
     url.searchParams.set("vs_currency", "usd");
     url.searchParams.set("days", period);
     if (period === "max") url.searchParams.set("interval", "daily");
@@ -204,6 +251,9 @@ export class CoinGeckoMarketDataProvider
       assetId,
       period,
       source: "coingecko" as const,
+      status: "fresh" as const,
+      asOf: new Date().toISOString(),
+      expiresAt: null,
       updatedAt: new Date().toISOString(),
       points,
     };
@@ -227,6 +277,9 @@ export class CoinGeckoMarketDataProvider
     return {
       assetId,
       source: "coingecko" as const,
+      status: "fresh" as const,
+      asOf: new Date().toISOString(),
+      expiresAt: null,
       iconUrl: details.image?.small ?? null,
       categories: details.categories ?? [],
       marketCapUsd: details.market_data?.market_cap?.usd ?? null,

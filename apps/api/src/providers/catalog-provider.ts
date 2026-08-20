@@ -8,10 +8,7 @@ export class CuratedCatalogProvider implements FeedCatalogProvider {
   private readonly items: FeedItem[];
 
   constructor(items: FeedItem[]) {
-    this.items = items.map((item) => ({
-      ...item,
-      ...(item.mint ? { mint: item.mint } : { mint: null }),
-    }));
+    this.items = items.map((item) => ({ ...item }));
   }
 
   async getItems() {

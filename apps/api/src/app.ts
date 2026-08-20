@@ -3,6 +3,7 @@ import {
   type AccountBootstrapResponse,
   basketDraftRequestSchema,
   basketReviewRequestSchema,
+  type FeedItem,
   marketChartPeriodSchema,
 } from "@invest4fun/contracts";
 import type { Database } from "@invest4fun/database";
@@ -137,7 +138,11 @@ export function createApp(
 
     try {
       response.json(
-        await chartProvider.getHistory(asset.coingeckoId, period.data),
+        await chartProvider.getHistory(
+          asset.id,
+          asset.coingeckoId,
+          period.data,
+        ),
       );
     } catch {
       sendApiError(response, 503, "MARKET_CHART_UNAVAILABLE");
@@ -192,22 +197,10 @@ export function createApp(
       return;
     }
 
-    const resolvedItems = parsed.data.items.map((item) => {
-      const catalogItem =
-        item.kind === "asset"
-          ? feedItems.find((asset) => asset.id === item.id)
-          : ideas.find((idea) => idea.id === item.id);
-      return catalogItem
-        ? {
-            ...item,
-            title:
-              item.kind === "asset"
-                ? (catalogItem as (typeof feedItems)[number]).name
-                : (catalogItem as (typeof ideas)[number]).title,
-            amountCents: Math.round(item.amountUsd * 100),
-          }
-        : null;
-    });
+    const catalogItems = await catalogProvider.getItems();
+    const resolvedItems = parsed.data.items.map((item) =>
+      resolveBasketInput(item, catalogItems),
+    );
 
     if (resolvedItems.some((item) => item === null)) {
       sendApiError(
@@ -291,22 +284,10 @@ export function createApp(
       return;
     }
 
-    const resolvedItems = parsed.data.items.map((item) => {
-      const catalogItem =
-        item.kind === "asset"
-          ? feedItems.find((asset) => asset.id === item.id)
-          : ideas.find((idea) => idea.id === item.id);
-      return catalogItem
-        ? {
-            ...item,
-            title:
-              item.kind === "asset"
-                ? (catalogItem as (typeof feedItems)[number]).name
-                : (catalogItem as (typeof ideas)[number]).title,
-            amountCents: Math.round(item.amountUsd * 100),
-          }
-        : null;
-    });
+    const catalogItems = await catalogProvider.getItems();
+    const resolvedItems = parsed.data.items.map((item) =>
+      resolveBasketInput(item, catalogItems),
+    );
 
     if (resolvedItems.some((item) => item === null)) {
       sendApiError(
@@ -493,6 +474,31 @@ function sendApiError(
   });
 }
 
+function resolveBasketInput(
+  item: { id: string; kind: "asset" | "idea"; amountUsd: number },
+  catalogItems: FeedItem[],
+) {
+  const catalogItem =
+    item.kind === "asset"
+      ? catalogItems.find((asset) => asset.id === item.id)
+      : ideas.find((idea) => idea.id === item.id);
+  if (!catalogItem) return null;
+  if (
+    item.kind === "asset" &&
+    !(catalogItem as FeedItem).eligibility.executable
+  ) {
+    return null;
+  }
+  return {
+    ...item,
+    title:
+      item.kind === "asset"
+        ? (catalogItem as FeedItem).name
+        : (catalogItem as (typeof ideas)[number]).title,
+    amountCents: Math.round(item.amountUsd * 100),
+  };
+}
+
 export type AuthProvider = {
   configured(): boolean;
   bootstrap(accessToken: string): Promise<AccountBootstrapResponse>;
@@ -589,7 +595,7 @@ async function readDraftBasket(database: Database, basketId: string) {
   };
 }
 
-function orderFeedItems(items: typeof feedItems, seed: string) {
+function orderFeedItems(items: FeedItem[], seed: string) {
   return [...items].sort(
     (left, right) => feedOrderKey(seed, left.id) - feedOrderKey(seed, right.id),
   );
