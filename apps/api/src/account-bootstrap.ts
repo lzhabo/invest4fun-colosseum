@@ -48,54 +48,89 @@ export async function bootstrapAccount(
   const linkedWallets = (privyUser.linked_accounts ?? []).filter(
     (account) => isSolanaWallet(account) && account.address,
   );
+  const linkedWalletAddresses = linkedWallets.map(
+    (wallet) => wallet.address as string,
+  );
+  const activeEmbeddedAddress =
+    linkedWallets.find((wallet) => walletRole(wallet) === "embedded")
+      ?.address ?? null;
 
-  const existing = await database.query<AccountRow>(
+  const account = await database.query<AccountRow>(
     `
+      with candidate_user as (
+        insert into app.users default values
+        returning id
+      ),
+      identity as (
+        insert into app.auth_identities (user_id, provider, external_subject)
+        select id, $1, $2
+        from candidate_user
+        on conflict (provider, external_subject)
+        do update set updated_at = now()
+        returning user_id
+      ),
+      cleanup_candidate as (
+        delete from app.users
+        using candidate_user, identity
+        where app.users.id = candidate_user.id
+          and identity.user_id <> candidate_user.id
+        returning app.users.id
+      )
       select u.id, u.status
       from app.users u
-      join app.auth_identities i on i.user_id = u.id
-      where i.provider = $1 and i.external_subject = $2
+      join identity i on i.user_id = u.id
     `,
     ["privy", privyUserId],
   );
 
-  let user = existing.rows[0];
-  if (!user) {
-    const created = await database.query<AccountRow>(
-      `insert into app.users default values returning id, status`,
-    );
-    user = created.rows[0];
-  }
+  const user = account.rows[0];
   if (!user) throw new Error("INTERNAL_USER_BOOTSTRAP_FAILED");
 
   await database.query(
     `
-      insert into app.auth_identities (user_id, provider, external_subject)
-      values ($1, $2, $3)
-      on conflict (provider, external_subject)
-      do update set updated_at = now()
+      update app.wallets
+      set is_active = false, updated_at = now()
+      where user_id = $1
+        and chain = 'solana'
+        and custody_provider = 'privy'
+        and role = 'embedded'
+        and ($2::text is null or address <> $2)
     `,
-    [user.id, "privy", privyUserId],
+    [user.id, activeEmbeddedAddress],
   );
 
   for (const wallet of linkedWallets) {
     const address = wallet.address as string;
     const role = walletRole(wallet);
+    const active = role === "external" || address === activeEmbeddedAddress;
     await database.query(
       `
         insert into app.wallets
-          (user_id, chain, address, role, custody_provider, label)
-        values ($1, 'solana', $2, $3, 'privy', $4)
+          (user_id, chain, address, role, custody_provider, label, is_active)
+        values ($1, 'solana', $2, $3, 'privy', $4, $5)
         on conflict (chain, address)
         do update set
-          user_id = excluded.user_id,
           role = excluded.role,
           label = excluded.label,
+          is_active = excluded.is_active,
           updated_at = now()
+        where app.wallets.user_id = excluded.user_id
       `,
-      [user.id, address, role, wallet.meta?.name ?? null],
+      [user.id, address, role, wallet.meta?.name ?? null, active],
     );
   }
+
+  await database.query(
+    `
+      update app.wallets
+      set is_active = (address = any($2::text[])), updated_at = now()
+      where user_id = $1
+        and chain = 'solana'
+        and custody_provider = 'privy'
+        and role = 'external'
+    `,
+    [user.id, linkedWalletAddresses],
+  );
 
   const wallets = await database.query<WalletRow>(
     `

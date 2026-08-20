@@ -4,216 +4,76 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#080d1b" />
-    <meta
-      name="description"
-      content="Invest4Fun helps you explore investment ideas and build a portfolio around your goals."
-    />
+    <meta name="description" content="Invest4Fun helps you explore investment ideas and build a portfolio around your goals." />
     <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Invest4Fun - Investing for Everyone" />
-    <meta
-      property="og:description"
-      content="Share your goals, choose the ideas you like, and build your portfolio in minutes."
-    />
-    <meta property="og:url" content="https://invest4.fun/" />
     <link rel="canonical" href="https://invest4.fun/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Invest4Fun - Investing for Everyone</title>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Invest4Fun home">
-        invest4.<span>fun</span>
-      </a>
+      <a class="brand" href="/" aria-label="Invest4Fun home">invest4.<span>fun</span></a>
       <span class="beta-badge">Beta</span>
       <a class="header-sign-in" href="https://app.invest4.fun">Sign in</a>
     </header>
 
-    <main>
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
+    <main class="landing-site">
+      <section class="landing-page" aria-labelledby="hero-title">
+        <div class="landing-hero-copy">
           <h1 id="hero-title"><span>Investing for</span> <em>Everyone</em></h1>
-          <p>
-            Share your goals, choose the ideas you like, and build your portfolio
-            in 2 minutes.
-          </p>
-          <a class="primary-action" href="https://app.invest4.fun">Sign in</a>
-          <small>Simple to start. Always your decision.</small>
+          <p>Share your goals, choose the ideas you like, and build your portfolio in 2 minutes.</p>
+          <a class="landing-sign-in" href="https://app.invest4.fun">Sign in</a>
+          <small>Simple to start. No minimum amount required.</small>
         </div>
-
-        <section class="preview" aria-label="Invest4Fun product preview">
-          <div class="preview-stack-shell">
-            <div class="preview-stack" data-preview-stack>
-              <article class="preview-card strategy-card" data-preview-card>
-                <header class="card-header">
-                  <img src="/assets/solana.svg" alt="Solana" />
-                  <div><h2>Solana Maxi</h2><p>Curated Solana portfolio</p></div>
-                  <strong>$100</strong>
-                </header>
-                <div class="card-metric"><span>Strategy</span><b>+8.42% &middot; 3M</b></div>
-                <svg class="mini-chart" viewBox="0 0 478 144" role="img" aria-label="Illustrative performance chart">
-                  <line x1="0" x2="478" y1="48" y2="48" />
-                  <line x1="0" x2="478" y1="96" y2="96" />
-                  <polyline points="0,116 42,109 82,112 124,91 166,97 208,73 250,78 292,55 334,62 376,39 420,47 478,24" />
-                </svg>
-                <div class="composition" role="img" aria-label="Portfolio allocation"><i></i><i></i><i></i><i></i><i></i></div>
-                <fieldset class="holding-list" aria-label="Example holdings">
-                  <img src="/assets/solana.svg" alt="SOL" />
-                  <img src="https://static.jup.ag/jup/icon.png" alt="JUP" />
-                  <span>+5</span>
-                </fieldset>
-                <p class="card-note">A concentrated mix of Solana ecosystem assets.</p>
-                <div class="card-action">Add portfolio <span>&rsaquo;</span></div>
+        <section class="landing-preview" aria-label="Explore the product">
+          <div class="landing-stack-shell">
+            <div class="landing-stack" data-preview-stack>
+              <article class="landing-stack-card" data-preview-card data-title="S&P 500" data-subtitle="U.S. large-cap index" data-symbol="SPY" data-kind="Suggested asset">
+                <div class="landing-border-glow"><div class="landing-border-glow-inner"><div class="landing-preview-card">
+                  <header class="landing-preview-header"><img class="landing-token-mark" src="https://xstocks-metadata.backed.fi/logos/tokens/SPYx.png" alt="S&P 500" /><div><p class="landing-card-kind">Suggested asset</p><h2>S&amp;P 500</h2><p>U.S. large-cap index</p></div></header>
+                  <div class="landing-preview-metric"><strong>$592.14</strong><b>+4.82% · 1M</b></div>
+                  <svg class="landing-mini-chart" viewBox="0 0 478 144" role="img" aria-label="S&P 500 one month performance chart"><line x1="0" x2="478" y1="48" y2="48"/><line x1="0" x2="478" y1="96" y2="96"/><polyline points="0,116 42,108 82,112 124,88 166,97 208,72 250,78 292,52 334,63 376,39 420,46 478,23"/></svg>
+                  <p class="landing-preview-note">A diversified market starting point.</p><div class="landing-preview-action">Add S&amp;P 500 <span>›</span></div>
+                </div></div></div>
               </article>
-
-              <article class="preview-card strategy-card" data-preview-card>
-                <header class="card-header">
-                  <img src="https://static.jup.ag/jup/icon.png" alt="Jupiter" />
-                  <div><h2>Infrastructure</h2><p>Solana utility portfolio</p></div>
-                  <strong>$100</strong>
-                </header>
-                <div class="card-metric"><span>Strategy</span><b>+4.18% &middot; 3M</b></div>
-                <svg class="mini-chart" viewBox="0 0 478 144" role="img" aria-label="Illustrative performance chart">
-                  <line x1="0" x2="478" y1="48" y2="48" />
-                  <line x1="0" x2="478" y1="96" y2="96" />
-                  <polyline points="0,110 42,102 82,106 124,88 166,92 208,82 250,65 292,71 334,49 376,58 420,43 478,36" />
-                </svg>
-                <div class="composition" role="img" aria-label="Portfolio allocation"><i></i><i></i><i></i><i></i><i></i></div>
-                <fieldset class="holding-list" aria-label="Example holdings">
-                  <img src="https://static.jup.ag/jup/icon.png" alt="JUP" />
-                  <img src="/assets/solana.svg" alt="SOL" />
-                  <span>+4</span>
-                </fieldset>
-                <p class="card-note">Protocols that help the Solana network move.</p>
-                <div class="card-action">Add portfolio <span>&rsaquo;</span></div>
+              <article class="landing-stack-card" data-preview-card data-title="AI Leaders" data-subtitle="AI growth basket" data-symbol="AI" data-kind="Curated portfolio">
+                <div class="landing-border-glow"><div class="landing-border-glow-inner"><div class="landing-preview-card">
+                  <header class="landing-preview-header"><img class="landing-token-mark" src="https://xstocks-metadata.backed.fi/logos/tokens/NVDAx.png" alt="AI Leaders" /><div><p class="landing-card-kind">Curated portfolio</p><h2>AI Leaders</h2><p>AI growth basket</p></div></header>
+                  <div class="landing-preview-metric"><strong>100%</strong><b>Editable idea</b></div><div class="landing-composition"><i></i><i></i><i></i><i></i><i></i></div>
+                  <div class="landing-holdings"><img src="https://xstocks-metadata.backed.fi/logos/tokens/NVDAx.png" alt="NVIDIA"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/MSFTx.png" alt="Microsoft"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/GOOGLx.png" alt="Alphabet"/><span>+1</span></div>
+                  <p class="landing-preview-note">A basket for the AI infrastructure theme.</p><div class="landing-preview-action">Add portfolio <span>›</span></div>
+                </div></div></div>
               </article>
-
-              <article class="preview-card strategy-card" data-preview-card>
-                <header class="card-header">
-                  <img src="/assets/solana.svg" alt="Solana" />
-                  <div><h2>Ansem Alpha</h2><p>Crypto conviction basket</p></div>
-                  <strong>$100</strong>
-                </header>
-                <div class="card-metric"><span>Strategy</span><b>+11.03% &middot; 3M</b></div>
-                <svg class="mini-chart" viewBox="0 0 478 144" role="img" aria-label="Illustrative performance chart">
-                  <line x1="0" x2="478" y1="48" y2="48" />
-                  <line x1="0" x2="478" y1="96" y2="96" />
-                  <polyline points="0,120 42,102 82,111 124,84 166,95 208,61 250,73 292,45 334,56 376,30 420,44 478,18" />
-                </svg>
-                <div class="composition" role="img" aria-label="Portfolio allocation"><i></i><i></i><i></i><i></i><i></i></div>
-                <fieldset class="holding-list" aria-label="Example holdings">
-                  <img src="/assets/solana.svg" alt="SOL" />
-                  <img src="https://static.jup.ag/jup/icon.png" alt="JUP" />
-                  <span>+7</span>
-                </fieldset>
-                <p class="card-note">A high-conviction, Solana-first crypto mix.</p>
-                <div class="card-action">Add portfolio <span>&rsaquo;</span></div>
+              <article class="landing-stack-card" data-preview-card data-title="ETH" data-subtitle="Ethereum" data-symbol="ETH" data-kind="Suggested asset">
+                <div class="landing-border-glow"><div class="landing-border-glow-inner"><div class="landing-preview-card">
+                  <header class="landing-preview-header"><img class="landing-token-mark" src="https://assets.coingecko.com/coins/images/279/large/ethereum.png" alt="Ethereum" /><div><p class="landing-card-kind">Suggested asset</p><h2>ETH</h2><p>Ethereum</p></div></header>
+                  <div class="landing-preview-metric"><strong>$2,640</strong><b>+7.16% · 1M</b></div><svg class="landing-mini-chart" viewBox="0 0 478 144" role="img" aria-label="Ethereum one month performance chart"><line x1="0" x2="478" y1="48" y2="48"/><line x1="0" x2="478" y1="96" y2="96"/><polyline points="0,118 42,102 82,110 124,84 166,94 208,64 250,76 292,45 334,58 376,32 420,47 478,19"/></svg><p class="landing-preview-note">A card from your personalized feed.</p><div class="landing-preview-action">Add ETH <span>›</span></div>
+                </div></div></div>
               </article>
-
-              <article class="preview-card asset-card" data-preview-card>
-                <header class="card-header">
-                  <img src="https://static.jup.ag/jup/icon.png" alt="Jupiter" />
-                  <div><h2>JUP</h2><p>Jupiter</p></div>
-                  <strong>$100</strong>
-                </header>
-                <div class="card-metric"><span>$0.89</span><b>+6.72% &middot; 1M</b></div>
-                <svg class="mini-chart" viewBox="0 0 478 144" role="img" aria-label="Illustrative performance chart">
-                  <line x1="0" x2="478" y1="48" y2="48" />
-                  <line x1="0" x2="478" y1="96" y2="96" />
-                  <polyline points="0,115 42,100 82,105 124,91 166,98 208,70 250,76 292,60 334,68 376,42 420,51 478,31" />
-                </svg>
-                <p class="card-note">A card from your personalized feed.</p>
-                <div class="card-action">Add 100 USDC <span>&rsaquo;</span></div>
-              </article>
-
-              <article class="preview-card asset-card" data-preview-card>
-                <header class="card-header">
-                  <img src="/assets/solana.svg" alt="Solana" />
-                  <div><h2>SOL</h2><p>Solana</p></div>
-                  <strong>$100</strong>
-                </header>
-                <div class="card-metric"><span>$184.32</span><b>+9.36% &middot; 1M</b></div>
-                <svg class="mini-chart" viewBox="0 0 478 144" role="img" aria-label="Illustrative performance chart">
-                  <line x1="0" x2="478" y1="48" y2="48" />
-                  <line x1="0" x2="478" y1="96" y2="96" />
-                  <polyline points="0,118 42,111 82,96 124,104 166,82 208,87 250,63 292,70 334,44 376,52 420,34 478,21" />
-                </svg>
-                <p class="card-note">A card from your personalized feed.</p>
-                <div class="card-action">Add 100 USDC <span>&rsaquo;</span></div>
+              <article class="landing-stack-card" data-preview-card data-title="OpenAI" data-subtitle="OpenAI Pre-IPO" data-symbol="OPENAI" data-kind="Suggested asset">
+                <div class="landing-border-glow"><div class="landing-border-glow-inner"><div class="landing-preview-card"><header class="landing-preview-header"><img class="landing-token-mark" src="https://prestocks.com/_next/image?url=%2Fui%2Fproduct-logos%2Fopenai.webp&w=256&q=75" alt="OpenAI"/><div><p class="landing-card-kind">Suggested asset</p><h2>OpenAI</h2><p>OpenAI Pre-IPO</p></div></header><div class="landing-preview-metric metric-only"><strong>OPENAI</strong><b>New idea</b></div><p class="landing-preview-note">Explore private-market themes where available.</p><div class="landing-preview-action">Add OpenAI <span>›</span></div></div></div></div>
               </article>
             </div>
-            <p class="swipe-hint" data-swipe-hint>Swipe or tap the card</p>
-            <div class="stack-dots" aria-hidden="true" data-stack-dots></div>
+            <p class="landing-swipe-hint" data-swipe-hint><span aria-hidden="true">☝️</span>Swipe or tap the card</p>
+            <div class="landing-stack-dots" aria-hidden="true" data-stack-dots></div>
           </div>
         </section>
       </section>
 
-      <section class="comparison" aria-labelledby="comparison-title">
-        <div class="comparison-heading">
-          <div>
-            <p class="section-label">Explore the idea</p>
-            <h2 id="comparison-title">See what your money could have done.</h2>
-            <p>
-              Compare the USD value of local cash with T-Bills and example
-              portfolio paths.
-            </p>
-          </div>
-          <label class="currency-picker">
-            <span>Local currency</span>
-            <select data-currency-picker>
-              <option value="RUB">RUB - Russian ruble</option>
-              <option value="TRY" selected>TRY - Turkish lira</option>
-              <option value="BRL">BRL - Brazilian real</option>
-              <option value="INR">INR - Indian rupee</option>
-              <option value="IDR">IDR - Indonesian rupiah</option>
-              <option value="ZAR">ZAR - South African rand</option>
-              <option value="SGD">SGD - Singapore dollar</option>
-            </select>
-          </label>
-        </div>
+      <section class="comparison" aria-labelledby="comparison-title"><div class="comparison-heading"><div><p class="section-label">Explore the idea</p><h2 id="comparison-title">See what your money could have done.</h2><p>Compare the value of local cash with T-Bills and example portfolio paths.</p></div><label class="currency-picker"><span>Local currency</span><select data-currency-picker><option value="RUB">RUB - Russian ruble</option><option value="TRY" selected>TRY - Turkish lira</option><option value="BRL">BRL - Brazilian real</option><option value="INR">INR - Indian rupee</option><option value="IDR">IDR - Indonesian rupiah</option><option value="ZAR">ZAR - South African rand</option><option value="SGD">SGD - Singapore dollar</option></select></label></div><div class="chart-card"><div class="chart-summary"><span>Starting value</span><strong>$10,000</strong><small>Illustrative period</small></div><div class="chart-legend"><span><i class="mint"></i><span data-currency-code>TRY cash</span><b data-local-value>$6,240</b></span><span><i class="coral"></i>3M T-Bills<b>$11,180</b></span><span><i class="purple"></i>Balanced idea<b>$12,460</b></span><span><i class="blue"></i>Growth idea<b>$13,220</b></span></div><div class="chart-wrap"><svg viewBox="0 0 1000 460" role="img" aria-label="Illustrative historical comparison"><g class="grid-lines"><line x1="70" x2="960" y1="70" y2="70"/><text x="0" y="75">$14k</text><line x1="70" x2="960" y1="180" y2="180"/><text x="0" y="185">$11k</text><line x1="70" x2="960" y1="290" y2="290"/><text x="0" y="295">$8k</text><line x1="70" x2="960" y1="400" y2="400"/><text x="0" y="405">$5k</text></g><polyline class="chart-line mint" data-local-line points="70,216 190,235 310,258 430,286 550,312 670,338 790,367 960,394"/><polyline class="chart-line coral" points="70,216 190,211 310,204 430,197 550,190 670,181 790,170 960,155"/><polyline class="chart-line purple" points="70,216 190,230 310,197 430,210 550,168 670,181 790,134 960,108"/><polyline class="chart-line blue" points="70,216 190,196 310,218 430,172 550,190 670,136 790,151 960,82"/><text x="70" y="447">Start</text><text x="960" y="447" text-anchor="end">Today</text></svg></div><p class="chart-note">Illustrative normalized comparison for product exploration only. It is not investment advice or a promise of future performance.</p></div></section>
 
-        <div class="chart-card">
-          <div class="chart-summary">
-            <span>Starting value</span>
-            <strong>$10,000</strong>
-            <small>Illustrative period</small>
-          </div>
-          <div class="chart-legend">
-            <span><i class="mint"></i><span data-currency-code>TRY cash</span><b data-local-value>$6,240</b></span>
-            <span><i class="coral"></i>3M T-Bills<b>$11,180</b></span>
-            <span><i class="purple"></i>Balanced idea<b>$12,460</b></span>
-            <span><i class="blue"></i>Growth idea<b>$13,220</b></span>
-          </div>
-          <div class="chart-wrap">
-            <svg viewBox="0 0 1000 460" role="img" aria-label="Illustrative historical comparison">
-              <title>Illustrative value comparison</title>
-              <g class="grid-lines">
-                <line x1="70" x2="960" y1="70" y2="70" /><text x="0" y="75">$14k</text>
-                <line x1="70" x2="960" y1="180" y2="180" /><text x="0" y="185">$11k</text>
-                <line x1="70" x2="960" y1="290" y2="290" /><text x="0" y="295">$8k</text>
-                <line x1="70" x2="960" y1="400" y2="400" /><text x="0" y="405">$5k</text>
-              </g>
-              <polyline class="chart-line mint" data-local-line points="70,216 190,235 310,258 430,286 550,312 670,338 790,367 960,394" />
-              <polyline class="chart-line coral" points="70,216 190,211 310,204 430,197 550,190 670,181 790,170 960,155" />
-              <polyline class="chart-line purple" points="70,216 190,230 310,197 430,210 550,168 670,181 790,134 960,108" />
-              <polyline class="chart-line blue" points="70,216 190,196 310,218 430,172 550,190 670,136 790,151 960,82" />
-              <text x="70" y="447">Start</text><text x="960" y="447" text-anchor="end">Today</text>
-            </svg>
-          </div>
-          <p class="chart-note">
-            Illustrative normalized comparison for product exploration only. It is
-            not investment advice or a promise of future performance.
-          </p>
-        </div>
-      </section>
+      <section class="asset-markets-section" aria-labelledby="asset-markets-title"><header class="asset-markets-header"><div><h2 id="asset-markets-title">Assets for every strategy.</h2><p>From crypto and stocks to commodities and pre-IPO themes, choose the assets—or a curated portfolio—that match how you want to invest.</p></div><a class="asset-markets-cta" href="https://app.invest4.fun">Explore assets <span>→</span></a></header><div class="asset-markets-grid"><article class="asset-market-card"><div><p class="asset-market-eyebrow">Public markets</p><h3>Stocks</h3><p class="asset-market-description">Access 600+ companies from the U.S. and global markets.</p></div><div class="asset-market-assets"><img src="https://xstocks-metadata.backed.fi/logos/tokens/NVDAx.png" alt="NVIDIA"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/TSLAx.png" alt="Tesla"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/AAPLx.png" alt="Apple"/><span>600+ stocks</span></div></article><article class="asset-market-card"><div><p class="asset-market-eyebrow">Digital assets</p><h3>Crypto</h3><p class="asset-market-description">Discover established assets and emerging tokens on Solana.</p></div><div class="asset-market-assets"><img src="https://wsrv.nl/?w=32&h=32&url=https%3A%2F%2Fraw.githubusercontent.com%2Fsolana-labs%2Ftoken-list%2Fmain%2Fassets%2Fmainnet%2F3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh%2Flogo.png&dpr=2&quality=80" alt="Bitcoin"/><img src="https://assets.coingecko.com/coins/images/279/large/ethereum.png" alt="Ethereum"/><img src="/assets/solana.svg" alt="Solana"/><span>3,900+ crypto assets</span></div></article><article class="asset-market-card"><div><p class="asset-market-eyebrow">Private-market themes</p><h3>Pre-IPO</h3><p class="asset-market-description">Gain exposure to private companies before they go public.</p></div><div class="asset-market-assets"><img src="https://prestocks.com/_next/image?url=%2Fui%2Fproduct-logos%2Fopenai.webp&w=256&q=75" alt="OpenAI"/><img src="https://prestocks.com/_next/image?url=%2Fui%2Fproduct-logos%2Fanthropic.webp&w=256&q=75" alt="Anthropic"/><span>7 companies</span></div></article><article class="asset-market-card"><div><p class="asset-market-eyebrow">Real assets</p><h3>Commodities</h3><p class="asset-market-description">Invest in gold, silver, platinum, and palladium through commodity trusts.</p></div><div class="asset-market-assets"><img src="https://xstocks-metadata.backed.fi/logos/tokens/GLDx.png" alt="Gold"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/SLVx.png" alt="Silver"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/PALLx.png" alt="Palladium"/><span>4 commodity trusts</span></div></article><article class="asset-market-card"><div><p class="asset-market-eyebrow">Funds &amp; strategies</p><h3>ETFs</h3><p class="asset-market-description">Explore broad markets, sectors, bonds, treasuries, and select leveraged strategies.</p></div><div class="asset-market-assets"><img src="https://xstocks-metadata.backed.fi/logos/tokens/SPYx.png" alt="S&P 500 ETF"/><img src="https://xstocks-metadata.backed.fi/logos/tokens/QQQx.png" alt="QQQ ETF"/><span>42 ETFs</span></div></article></div></section>
+
+      <section class="money-flow-section" aria-labelledby="money-flow-title"><header class="money-flow-header"><h2 id="money-flow-title">Money in, money out. It&apos;s that easy.</h2></header><div class="money-flow-grid"><article class="money-flow-card"><div class="money-flow-methods" data-money-methods><button class="money-method is-active" type="button"><span class="money-method-icon">▣</span><span><strong>Bank card</strong><small>Visa or Mastercard</small></span><b>VISA</b></button><button class="money-method" type="button"><span class="money-method-icon">⌂</span><span><strong>Bank transfer</strong><small>From your bank account</small></span><b>SEPA</b></button><button class="money-method" type="button"><span class="money-method-icon">◈</span><span><strong>Stablecoins</strong><small>USDC or USDT</small></span><b>USDC</b></button></div><div class="money-flow-copy"><p class="money-flow-eyebrow">Payment methods</p><h3>Add money from anywhere.</h3><p>Top up with a bank card, bank transfer, or stablecoins.</p></div></article><article class="money-flow-card money-flow-card--withdraw"><div class="money-withdraw-visual"><strong>$500</strong><span>available</span><i>✓</i></div><div class="money-flow-copy"><p class="money-flow-eyebrow">Your money, your rules</p><h3>Withdraw anytime.</h3><p>Move funds back to your bank or crypto wallet when you need.</p></div></article></div></section>
+
+      <section class="ai-portfolio-section" aria-labelledby="ai-portfolio-title"><div class="ai-portfolio-intro"><h2 id="ai-portfolio-title">Your <em>idea</em> can be a portfolio.</h2><p>Describe a view. Get an editable basket with clear reasoning.</p><div class="ai-portfolio-prompt"><span data-ai-prompt></span><button type="button" data-ai-next aria-label="Show next portfolio idea">→</button></div></div><article class="ai-portfolio-result" data-ai-result><header><div><p>AI-generated portfolio</p><h3 data-ai-title>China tech comeback</h3></div><span>100%</span></header><ul data-ai-assets></ul><footer><span>Why these assets?</span><span>Editable</span></footer></article></section>
+
+      <section class="faq-section" aria-labelledby="faq-title"><div class="faq-heading"><h2 id="faq-title">FAQs</h2></div><div class="faq-list" data-faq-list></div></section>
+
+      <section class="landing-closing"><div class="landing-closing-layout"><div class="landing-closing-copy"><h2>Build your first portfolio in <em>2 minutes.</em></h2><p>No minimum amount required. Available 24/7.</p><a href="https://app.invest4.fun">Start now <span>→</span></a></div><div class="closing-card"><p>Curated portfolio</p><h3>AI Leaders</h3><div class="landing-composition"><i></i><i></i><i></i><i></i></div><p>AI growth basket</p><a href="https://app.invest4.fun">Explore idea →</a></div></div></section>
     </main>
 
-    <footer>
-      <a class="brand footer-brand" href="/">invest4.<span>fun</span></a>
-      <p class="footer-copy">Build deliberately. Invest on your terms.</p>
-      <a href="https://app.invest4.fun">Open the app</a>
-    </footer>
-
+    <footer class="landing-footer"><strong>invest4.<span>fun</span></strong><nav><a href="#faq-title">FAQ</a><a href="https://xstocks.fi/">Eligibility</a><a href="https://docs.xstocks.fi/docs/product-legal-overview">Risk disclosure</a></nav><p>© 2026 invest4.fun · Not investment advice.</p></footer>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

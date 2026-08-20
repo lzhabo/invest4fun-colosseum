@@ -4,24 +4,39 @@ import {
   Copy,
   ExternalLink,
   LogOut,
+  RefreshCw,
   Wallet,
 } from "lucide-react";
 import { useState } from "react";
-import type { WalletSummary } from "../../auth/auth-context";
+import type {
+  AccountBootstrapStatus,
+  WalletSummary,
+} from "../../auth/auth-context";
 
 export function WalletMenu({
   email,
   wallets,
+  walletsReady,
+  accountStatus,
+  onRetryAccount,
   onLogout,
 }: {
   email?: string | undefined;
   wallets: WalletSummary[];
+  walletsReady: boolean;
+  accountStatus: AccountBootstrapStatus;
+  onRetryAccount: () => Promise<void>;
   onLogout: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string>();
-  const primaryWallet = wallets[0];
-  const label = primaryWallet ? shortAddress(primaryWallet.address) : "Account";
+  const portfolioWallet =
+    wallets.find((wallet) => wallet.kind === "embedded") ?? wallets[0];
+  const label = portfolioWallet
+    ? shortAddress(portfolioWallet.address)
+    : accountStatus === "loading"
+      ? "Restoring"
+      : "Account";
 
   const copyAddress = async (address: string) => {
     await navigator.clipboard.writeText(address);
@@ -54,24 +69,43 @@ export function WalletMenu({
           </div>
 
           <div className="wallet-menu-balance">
-            <span>Investing balance</span>
-            <strong>Not connected yet</strong>
+            <span>Invest4Fun portfolio</span>
+            <strong>
+              {portfolioWallet?.kind === "embedded"
+                ? "Embedded wallet selected"
+                : "Wallet setup pending"}
+            </strong>
             <small>
-              Balance data will appear after the Solana RPC is connected.
+              External wallet balances stay separate and are not included here.
             </small>
           </div>
 
+          {accountStatus === "error" ? (
+            <div className="wallet-menu-alert" role="alert">
+              <strong>Account restore failed</strong>
+              <small>Retry bootstrap or sign in again.</small>
+              <button type="button" onClick={() => void onRetryAccount()}>
+                <RefreshCw aria-hidden="true" />
+                Retry
+              </button>
+            </div>
+          ) : null}
+
           <div className="wallet-menu-wallets">
             <span className="wallet-menu-label">Solana wallets</span>
-            {wallets.length ? (
+            {!walletsReady ? (
+              <small className="wallet-menu-empty">
+                Restoring linked Solana wallets...
+              </small>
+            ) : wallets.length ? (
               wallets.map((wallet) => (
                 <div className="wallet-menu-wallet" key={wallet.address}>
                   <div>
                     <strong>{wallet.name}</strong>
                     <small>
                       {wallet.kind === "embedded"
-                        ? "Invest4Fun wallet"
-                        : "External wallet"}
+                        ? `Portfolio wallet - ${wallet.provider}`
+                        : `External funding wallet - ${wallet.provider}`}
                     </small>
                   </div>
                   <code>{shortAddress(wallet.address)}</code>

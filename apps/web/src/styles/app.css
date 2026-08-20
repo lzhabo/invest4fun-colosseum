@@ -180,6 +180,38 @@
   font-size: 11px;
   line-height: 1.4;
 }
+.wallet-menu-alert {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--coral);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--coral) 9%, var(--paper));
+}
+.wallet-menu-alert strong {
+  color: var(--coral);
+  font-size: 13px;
+}
+.wallet-menu-alert button {
+  width: max-content;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 9px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+.wallet-menu-alert button svg {
+  width: 13px;
+  height: 13px;
+}
 .wallet-menu-wallets {
   display: grid;
   gap: 8px;
@@ -1304,6 +1336,47 @@
 .account-heading h1 {
   font-size: 52px;
 }
+.account-restore-state {
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+}
+.account-restore-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.account-status-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--ground);
+}
+.account-status-panel strong {
+  font-size: 15px;
+}
+.account-status-panel p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.account-status-panel button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 10px 13px;
+}
+.account-status-panel button svg {
+  width: 14px;
+  height: 14px;
+}
 .account-balance {
   display: grid;
   gap: 22px;
@@ -1347,6 +1420,10 @@
   flex: 0 0 auto;
   padding: 10px 14px;
   font-size: 12px;
+}
+.account-top-up-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 .account-top-up-trigger svg,
 .account-top-up-copy svg {
@@ -1596,6 +1673,9 @@
 .account-signout {
   margin-top: 28px;
   color: var(--coral);
+}
+.account-restore-actions .account-signout {
+  margin-top: 0;
 }
 .account-command-heading {
   display: flex;
@@ -2233,7 +2313,9 @@ html[data-theme="dark"] .chart-controls button.selected {
     font-size: 40px;
   }
   .account-address,
-  .account-row-copy {
+  .account-row-copy,
+  .account-status-panel,
+  .account-restore-actions {
     align-items: flex-start;
     flex-direction: column;
   }
