@@ -14,19 +14,30 @@ export type BasketEntry = {
   title: string;
   kind: "asset" | "idea";
   amountUsd: number;
+  sourceVersionId?: string | null | undefined;
+  sourceSnapshot?: unknown | undefined;
 };
 type BasketSource = Pick<BasketEntry, "id" | "kind">;
+export type BasketSyncStatus =
+  | "local"
+  | "loading"
+  | "saving"
+  | "synced"
+  | "error";
 
 type BasketContextValue = {
   entries: BasketEntry[];
   count: number;
   isOpen: boolean;
+  syncStatus: BasketSyncStatus;
+  syncError: string | null;
   add: (entry: BasketEntry) => void;
   updateAmount: (source: BasketSource, amountUsd: number) => void;
   remove: (source: BasketSource) => void;
   clear: () => void;
   open: () => void;
   close: () => void;
+  retrySync: () => void;
 };
 
 const STORAGE_KEY = "invest4fun:basket:v1";
@@ -62,6 +73,9 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const [entries, setEntries] = useState<BasketEntry[]>(readStoredBasket);
   const [isOpen, setIsOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<BasketSyncStatus>("local");
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [syncAttempt, setSyncAttempt] = useState(0);
   const entriesRef = useRef(entries);
   const remoteReady = useRef(false);
   const saveTimer = useRef<number | undefined>(undefined);
@@ -70,27 +84,19 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!auth.authenticated || !auth.accountReady) {
       remoteReady.current = false;
+      setSyncStatus("local");
       return;
     }
 
     let cancelled = false;
+    setSyncStatus("loading");
+    setSyncError(null);
     void (async () => {
       const accessToken = await auth.getAccessToken();
       if (!accessToken) return;
       try {
-        const response = await getDraftBasket(accessToken);
-        if (cancelled) return;
-        if (response.basket) {
-          setEntries(
-            response.basket.items.map(({ id, title, kind, amountUsd }) => ({
-              id,
-              title,
-              kind,
-              amountUsd,
-            })),
-          );
-        } else if (entriesRef.current.length) {
-          await saveDraftBasket(
+        if (syncAttempt > 0) {
+          const saved = await saveDraftBasket(
             entriesRef.current.map(({ id, kind, amountUsd }) => ({
               id,
               kind,
@@ -98,17 +104,45 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
             })),
             accessToken,
           );
+          if (!cancelled && saved.basket)
+            setEntries(saved.basket.items.map(toBasketEntry));
+          remoteReady.current = true;
+          if (!cancelled) setSyncStatus("synced");
+          return;
+        }
+        const response = await getDraftBasket(accessToken);
+        if (cancelled) return;
+        if (response.basket) {
+          setEntries(response.basket.items.map(toBasketEntry));
+        } else if (entriesRef.current.length) {
+          const saved = await saveDraftBasket(
+            entriesRef.current.map(({ id, kind, amountUsd }) => ({
+              id,
+              kind,
+              amountUsd,
+            })),
+            accessToken,
+          );
+          if (!cancelled && saved.basket)
+            setEntries(saved.basket.items.map(toBasketEntry));
         }
         remoteReady.current = true;
+        if (!cancelled) setSyncStatus("synced");
       } catch {
         remoteReady.current = false;
+        if (!cancelled) {
+          setSyncStatus("error");
+          setSyncError(
+            "Your basket is saved on this device, but could not sync to your account.",
+          );
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [auth.accountReady, auth.authenticated, auth.getAccessToken]);
+  }, [auth.accountReady, auth.authenticated, auth.getAccessToken, syncAttempt]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
@@ -117,13 +151,22 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
     }
 
     window.clearTimeout(saveTimer.current);
+    setSyncStatus("saving");
+    setSyncError(null);
     saveTimer.current = window.setTimeout(() => {
       void auth.getAccessToken().then((accessToken) => {
         if (!accessToken) return;
         void saveDraftBasket(
           entries.map(({ id, kind, amountUsd }) => ({ id, kind, amountUsd })),
           accessToken,
-        ).catch(() => undefined);
+        )
+          .then(() => setSyncStatus("synced"))
+          .catch(() => {
+            setSyncStatus("error");
+            setSyncError(
+              "Your latest basket changes could not sync. Retry before preparing a purchase.",
+            );
+          });
       });
     }, 350);
 
@@ -135,6 +178,8 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       entries,
       count: entries.length,
       isOpen,
+      syncStatus,
+      syncError,
       add: (entry) =>
         setEntries((current) =>
           current.some((item) => sameBasketSource(item, entry))
@@ -154,13 +199,25 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       clear: () => setEntries([]),
       open: () => setIsOpen(true),
       close: () => setIsOpen(false),
+      retrySync: () => setSyncAttempt((attempt) => attempt + 1),
     }),
-    [entries, isOpen],
+    [entries, isOpen, syncError, syncStatus],
   );
 
   return (
     <BasketContext.Provider value={value}>{children}</BasketContext.Provider>
   );
+}
+
+function toBasketEntry(entry: {
+  id: string;
+  title: string;
+  kind: "asset" | "idea";
+  amountUsd: number;
+  sourceVersionId?: string | null | undefined;
+  sourceSnapshot?: unknown | undefined;
+}): BasketEntry {
+  return entry;
 }
 
 function sameBasketSource(left: BasketSource, right: BasketSource) {

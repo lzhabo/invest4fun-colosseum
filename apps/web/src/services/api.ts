@@ -67,13 +67,14 @@ export function getAssetDetails(
 export async function reviewBasket(
   items: BasketEntryRequest[],
   accessToken: string,
+  idempotencyKey: string,
 ): Promise<BasketReviewResponse> {
   const response = await fetch("/api/baskets/review", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
-      "Idempotency-Key": crypto.randomUUID(),
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify({ items }),
   });
