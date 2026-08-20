@@ -1,7 +1,7 @@
 import { fileURLToPath } from "node:url";
 import { createDatabase } from "@invest4fun/database";
 import { config as loadEnvironment } from "dotenv";
-import { createApp } from "./app.js";
+import { createApp, createPrivyAuthProvider } from "./app.js";
 import { createFeedCatalog } from "./catalog.js";
 import { loadConfig } from "./config.js";
 import { CoinGeckoMarketDataProvider } from "./providers/market-data-provider.js";
@@ -21,6 +21,10 @@ const app = createApp(
   createFeedCatalog(config.COINGECKO_API_KEY),
   new CoinGeckoMarketDataProvider(config.COINGECKO_API_KEY),
   new CoinGeckoMarketDataProvider(config.COINGECKO_API_KEY),
+  createPrivyAuthProvider(database, {
+    appId: config.PRIVY_APP_ID,
+    appSecret: config.PRIVY_APP_SECRET,
+  }),
 );
 const server = app.listen(config.API_PORT, () => {
   process.stdout.write(

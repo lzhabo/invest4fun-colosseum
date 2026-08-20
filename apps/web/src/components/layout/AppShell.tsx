@@ -73,6 +73,10 @@ export function AppShell({
 
   async function preparePurchase() {
     setPrepareError(null);
+    if (!auth.accountReady) {
+      setPrepareError("Finish account restoration before preparing a basket.");
+      return;
+    }
     setPreparing(true);
     try {
       const accessToken = await auth.getAccessToken();
@@ -134,6 +138,9 @@ export function AppShell({
             <WalletMenu
               email={auth.user?.email?.address}
               wallets={auth.wallets}
+              walletsReady={auth.walletsReady}
+              accountStatus={auth.accountStatus}
+              onRetryAccount={auth.refreshAccount}
               onLogout={auth.logout}
             />
           ) : (
@@ -322,9 +329,16 @@ export function AppShell({
                 type="button"
                 className="legacy-primary-button"
                 disabled={
-                  !basketIsValid || preparing || preparedForCurrentBasket
+                  !basketIsValid ||
+                  preparing ||
+                  preparedForCurrentBasket ||
+                  !auth.accountReady
                 }
-                title="Purchase flow is not connected yet"
+                title={
+                  auth.accountReady
+                    ? "Purchase flow is not connected yet"
+                    : "Restore your account before preparing a purchase"
+                }
                 onClick={() => void preparePurchase()}
               >
                 {preparing

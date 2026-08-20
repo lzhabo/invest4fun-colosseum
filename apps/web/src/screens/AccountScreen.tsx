@@ -8,6 +8,7 @@ import {
   Info,
   LogOut,
   Moon,
+  RefreshCw,
   Sun,
   Wallet,
   X,
@@ -35,20 +36,57 @@ export function AccountScreen() {
 
   if (auth.authenticated) {
     const email = auth.user?.email?.address;
-    const primaryWallet = auth.wallets[0];
+    const portfolioWallet = auth.wallets.find(
+      (wallet) => wallet.kind === "embedded",
+    );
     return (
       <main className="legacy-page account-page">
         <header className="account-heading">
           <span>Identity and access</span>
           <h1>Account</h1>
-          <p>Your Invest4Fun account is connected through Privy.</p>
+          <p>
+            {auth.accountReady
+              ? "Your Invest4Fun account is connected through Privy."
+              : auth.accountStatus === "error"
+                ? "Your Privy session is active, but the Invest4Fun account could not be restored."
+                : "Restoring your Invest4Fun account from Privy."}
+          </p>
         </header>
+        {auth.accountStatus === "error" ? (
+          <section className="account-status-panel" role="alert">
+            <div>
+              <strong>Account restore failed</strong>
+              <p>
+                Retry the account bootstrap, or sign out and authenticate again
+                if the session has expired.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="legacy-primary-button"
+              onClick={() => void auth.refreshAccount()}
+            >
+              Retry <RefreshCw aria-hidden="true" />
+            </button>
+          </section>
+        ) : auth.accountStatus === "loading" ? (
+          <section
+            className="account-status-panel"
+            role="status"
+            aria-live="polite"
+          >
+            <div>
+              <strong>Restoring account</strong>
+              <p>Invest4Fun data will load after bootstrap completes.</p>
+            </div>
+          </section>
+        ) : null}
         <section className="account-balance">
           <div>
-            <span>Investing balance</span>
+            <span>Invest4Fun wallet</span>
             <strong>$0.00</strong>
             <small>
-              Available balance will appear after your first deposit.
+              Portfolio balances come only from the embedded Invest4Fun wallet.
             </small>
           </div>
           <div className="account-address">
@@ -59,7 +97,13 @@ export function AccountScreen() {
             <button
               type="button"
               className="legacy-primary-button account-top-up-trigger"
+              disabled={!auth.accountReady || !portfolioWallet}
               onClick={() => setTopUpOpen(true)}
+              title={
+                portfolioWallet
+                  ? undefined
+                  : "Embedded Invest4Fun wallet is not available yet"
+              }
             >
               Top up <ArrowDownToLine aria-hidden="true" />
             </button>
@@ -107,16 +151,18 @@ export function AccountScreen() {
                       </small>
                     </div>
                   </div>
-                  {primaryWallet ? (
+                  {portfolioWallet ? (
                     <div className="account-top-up-wallet">
                       <span>Deposit address</span>
-                      <code>{primaryWallet.address}</code>
+                      <code>{portfolioWallet.address}</code>
                       <button
                         type="button"
                         className="legacy-primary-button account-top-up-copy"
-                        onClick={() => void copyAddress(primaryWallet.address)}
+                        onClick={() =>
+                          void copyAddress(portfolioWallet.address)
+                        }
                       >
-                        {copiedAddress === primaryWallet.address ? (
+                        {copiedAddress === portfolioWallet.address ? (
                           <>
                             Copied <Check aria-hidden="true" />
                           </>
@@ -127,7 +173,11 @@ export function AccountScreen() {
                         )}
                       </button>
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="account-muted">
+                      Embedded Invest4Fun wallet setup is still pending.
+                    </p>
+                  )}
                 </article>
                 <article className="account-top-up-provider account-top-up-provider-muted">
                   <div className="account-top-up-provider-heading">
@@ -148,8 +198,9 @@ export function AccountScreen() {
               <p className="account-top-up-note">
                 <Info aria-hidden="true" />
                 <span>
-                  Only send supported assets on Solana. Keep some SOL in the
-                  wallet for network fees.
+                  Only send supported assets on Solana to the embedded
+                  Invest4Fun wallet. External wallets are funding sources, not
+                  portfolio wallets.
                 </span>
               </p>
             </section>
@@ -158,7 +209,11 @@ export function AccountScreen() {
         <section className="account-command-section">
           <h2>Wallets</h2>
           <div className="account-wallet-list">
-            {auth.wallets.length ? (
+            {!auth.walletsReady ? (
+              <p className="account-muted">
+                Restoring linked Solana wallets...
+              </p>
+            ) : auth.wallets.length ? (
               auth.wallets.map((wallet) => (
                 <div className="account-wallet-row" key={wallet.address}>
                   <div className="account-wallet-primary">
@@ -170,13 +225,15 @@ export function AccountScreen() {
                         ? "Invest4Fun wallet"
                         : wallet.name}
                     </strong>
-                    <span className="account-network">Solana</span>
+                    <span className="account-network">
+                      {wallet.kind === "embedded" ? "Portfolio" : "External"}
+                    </span>
                   </div>
                   <div className="account-row-copy">
                     <small>
                       {wallet.kind === "embedded"
-                        ? "Embedded portfolio wallet"
-                        : "External funding wallet"}
+                        ? `Embedded portfolio wallet - ${wallet.provider}`
+                        : `Funding or withdrawal wallet - ${wallet.provider}`}
                     </small>
                     <code>{wallet.address}</code>
                   </div>
@@ -203,7 +260,8 @@ export function AccountScreen() {
               ))
             ) : (
               <p className="account-muted">
-                No Solana wallet is available yet.
+                No Solana wallet is available yet. The embedded Invest4Fun
+                wallet must be restored before funding.
               </p>
             )}
           </div>

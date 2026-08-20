@@ -1,4 +1,7 @@
-import { accountBootstrapResponseSchema } from "@invest4fun/contracts";
+import {
+  type AccountBootstrapResponse,
+  accountBootstrapResponseSchema,
+} from "@invest4fun/contracts";
 import {
   PrivyProvider,
   type User,
@@ -13,10 +16,14 @@ import {
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
+
+export type AccountBootstrapStatus = "idle" | "loading" | "ready" | "error";
 
 type AuthState = {
   configured: boolean;
@@ -29,12 +36,16 @@ type AuthState = {
   wallets: WalletSummary[];
   walletsReady: boolean;
   accountReady: boolean;
+  accountStatus: AccountBootstrapStatus;
+  accountError: string | null;
+  refreshAccount: () => Promise<void>;
 };
 
 export type WalletSummary = {
   address: string;
   kind: "embedded" | "external";
   name: string;
+  provider: string;
   linked: boolean;
 };
 
@@ -49,6 +60,9 @@ const demoAuth: AuthState = {
   wallets: [],
   walletsReady: true,
   accountReady: true,
+  accountStatus: "idle",
+  accountError: null,
+  refreshAccount: async () => undefined,
 };
 
 const AuthContext = createContext<AuthState>(demoAuth);
@@ -98,18 +112,39 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
   const { wallets: allWallets, ready: allWalletsReady } = usePrivyWallets();
   const { wallets: solanaWallets, ready: solanaWalletsReady } =
     useSolanaWallets();
-  const [accountReady, setAccountReady] = useState(false);
-  const { login } = useLogin({
-    onComplete: async () => {
+  const [accountStatus, setAccountStatus] =
+    useState<AccountBootstrapStatus>("idle");
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [account, setAccount] = useState<AccountBootstrapResponse | null>(null);
+
+  const bootstrapAccount = useCallback(async () => {
+    setAccountStatus("loading");
+    setAccountError(null);
+    try {
       const accessToken = await getAccessToken();
-      if (!accessToken) return;
+      if (!accessToken) throw new Error("AUTH_TOKEN_UNAVAILABLE");
       const response = await fetch("/api/auth/bootstrap", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!response.ok) throw new Error("ACCOUNT_BOOTSTRAP_FAILED");
-      accountBootstrapResponseSchema.parse(await response.json());
-      setAccountReady(true);
+      const account = accountBootstrapResponseSchema.parse(
+        await response.json(),
+      );
+      setAccount(account);
+      setAccountStatus("ready");
+    } catch (error) {
+      setAccount(null);
+      setAccountStatus("error");
+      setAccountError(
+        error instanceof Error ? error.message : "ACCOUNT_BOOTSTRAP_FAILED",
+      );
+    }
+  }, [getAccessToken]);
+
+  const { login } = useLogin({
+    onComplete: async () => {
+      await bootstrapAccount();
     },
   });
 
@@ -121,22 +156,67 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (!ready) return;
     if (!authenticated) {
-      setAccountReady(false);
+      setAccountStatus("idle");
+      setAccountError(null);
+      setAccount(null);
       return;
     }
-    void (async () => {
-      const accessToken = await getAccessToken();
-      if (!accessToken) return;
-      const response = await fetch("/api/auth/bootstrap", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (!response.ok) return;
-      accountBootstrapResponseSchema.parse(await response.json());
-      setAccountReady(true);
-    })();
-  }, [authenticated, getAccessToken]);
+    void bootstrapAccount();
+  }, [authenticated, bootstrapAccount, ready]);
+
+  const wallets = useMemo<WalletSummary[]>(
+    () =>
+      account
+        ? account.wallets
+            .filter((wallet) => wallet.active)
+            .map((wallet) => {
+              const provider = formatWalletProvider(
+                wallet.label ?? undefined,
+                wallet.provider,
+              );
+              return {
+                address: wallet.address,
+                kind: wallet.role,
+                name:
+                  wallet.role === "embedded" ? "Invest4Fun wallet" : provider,
+                provider,
+                linked: true,
+              };
+            })
+            .sort((left, right) => {
+              if (left.kind === right.kind) return 0;
+              return left.kind === "embedded" ? -1 : 1;
+            })
+        : solanaWallets
+            .map((wallet) => {
+              const walletDetails = allWallets.find(
+                (candidate) => candidate.address === wallet.address,
+              );
+              const walletClientType = walletDetails?.walletClientType;
+              const kind: WalletSummary["kind"] =
+                walletClientType === "privy" || walletClientType === "privy-v2"
+                  ? "embedded"
+                  : "external";
+              const provider = formatWalletProvider(
+                walletDetails?.meta?.name,
+                walletClientType,
+              );
+              return {
+                address: wallet.address,
+                kind,
+                name: kind === "embedded" ? "Invest4Fun wallet" : provider,
+                provider,
+                linked: walletDetails?.linked ?? true,
+              };
+            })
+            .sort((left, right) => {
+              if (left.kind === right.kind) return 0;
+              return left.kind === "embedded" ? -1 : 1;
+            }),
+    [account, allWallets, solanaWallets],
+  );
 
   return (
     <AuthContext.Provider
@@ -148,24 +228,12 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
         login: loginWithLegacyFlow,
         logout,
         getAccessToken,
-        wallets: solanaWallets.map((wallet) => {
-          const walletDetails = allWallets.find(
-            (candidate) => candidate.address === wallet.address,
-          );
-          const walletClientType = walletDetails?.walletClientType;
-          return {
-            address: wallet.address,
-            kind:
-              walletClientType === "privy" || walletClientType === "privy-v2"
-                ? "embedded"
-                : "external",
-            name:
-              walletDetails?.meta?.name ?? walletClientType ?? "Solana wallet",
-            linked: walletDetails?.linked ?? true,
-          };
-        }),
+        wallets,
         walletsReady: allWalletsReady && solanaWalletsReady,
-        accountReady,
+        accountReady: accountStatus === "ready",
+        accountStatus,
+        accountError,
+        refreshAccount: bootstrapAccount,
       }}
     >
       {children}
@@ -175,4 +243,18 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   return useContext(AuthContext);
+}
+
+function formatWalletProvider(
+  name: string | undefined,
+  clientType: string | undefined,
+) {
+  if (name) return name;
+  if (!clientType) return "Solana wallet";
+  if (clientType === "privy" || clientType === "privy-v2") return "Privy";
+  return clientType
+    .split(/[-_]/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
 }

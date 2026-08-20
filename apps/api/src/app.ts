@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import {
+  type AccountBootstrapResponse,
   basketDraftRequestSchema,
   basketReviewRequestSchema,
   marketChartPeriodSchema,
@@ -22,11 +23,22 @@ export function createApp(
   catalogProvider: FeedCatalogProvider = feedCatalog,
   chartProvider?: MarketChartProvider,
   detailsProvider?: MarketDetailsProvider,
+  authProvider: AuthProvider = createPrivyAuthProvider(database),
 ) {
   const app = express();
   app.disable("x-powered-by");
   app.use(helmet());
   app.use(express.json({ limit: "64kb" }));
+  app.use((request, response, next) => {
+    const incomingRequestId = request.header("x-request-id");
+    const requestId =
+      incomingRequestId && incomingRequestId.length <= 120
+        ? incomingRequestId
+        : randomUUID();
+    response.locals.requestId = requestId;
+    response.setHeader("X-Request-Id", requestId);
+    next();
+  });
   app.use(
     "/api",
     rateLimit({
@@ -80,21 +92,23 @@ export function createApp(
         items: orderFeedItems(items, sessionId),
       });
     } catch {
-      response.status(503).json({
-        error: "FEED_CATALOG_UNAVAILABLE",
-        message: "The Feed catalog is temporarily unavailable.",
-      });
+      sendApiError(
+        response,
+        503,
+        "FEED_CATALOG_UNAVAILABLE",
+        "The Feed catalog is temporarily unavailable.",
+      );
     }
   });
   app.get("/api/feed/:assetId/details", async (request, response) => {
     if (!detailsProvider) {
-      response.status(503).json({ error: "ASSET_DETAILS_UNAVAILABLE" });
+      sendApiError(response, 503, "ASSET_DETAILS_UNAVAILABLE");
       return;
     }
 
     const asset = feedItems.find((item) => item.id === request.params.assetId);
     if (!asset?.coingeckoId) {
-      response.status(404).json({ error: "ASSET_DETAILS_NOT_FOUND" });
+      sendApiError(response, 404, "ASSET_DETAILS_NOT_FOUND");
       return;
     }
 
@@ -103,12 +117,12 @@ export function createApp(
         await detailsProvider.getDetails(asset.id, asset.coingeckoId),
       );
     } catch {
-      response.status(503).json({ error: "ASSET_DETAILS_UNAVAILABLE" });
+      sendApiError(response, 503, "ASSET_DETAILS_UNAVAILABLE");
     }
   });
   app.get("/api/feed/:assetId/chart", async (request, response) => {
     if (!chartProvider) {
-      response.status(503).json({ error: "MARKET_CHART_UNAVAILABLE" });
+      sendApiError(response, 503, "MARKET_CHART_UNAVAILABLE");
       return;
     }
 
@@ -117,7 +131,7 @@ export function createApp(
       request.query.days ?? "30",
     );
     if (!asset?.coingeckoId || !period.success) {
-      response.status(404).json({ error: "MARKET_CHART_NOT_FOUND" });
+      sendApiError(response, 404, "MARKET_CHART_NOT_FOUND");
       return;
     }
 
@@ -126,7 +140,7 @@ export function createApp(
         await chartProvider.getHistory(asset.coingeckoId, period.data),
       );
     } catch {
-      response.status(503).json({ error: "MARKET_CHART_UNAVAILABLE" });
+      sendApiError(response, 503, "MARKET_CHART_UNAVAILABLE");
     }
   });
   app.get("/api/ideas", (_request, response) =>
@@ -134,9 +148,9 @@ export function createApp(
   );
 
   app.get("/api/baskets/draft", async (request, response) => {
-    const userId = await resolveInternalUserId(database, request);
+    const userId = await resolveInternalUserId(authProvider, request);
     if (!userId) {
-      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      sendApiError(response, 401, "AUTH_TOKEN_REQUIRED");
       return;
     }
 
@@ -161,18 +175,20 @@ export function createApp(
   });
 
   app.put("/api/baskets/draft", async (request, response) => {
-    const userId = await resolveInternalUserId(database, request);
+    const userId = await resolveInternalUserId(authProvider, request);
     if (!userId) {
-      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      sendApiError(response, 401, "AUTH_TOKEN_REQUIRED");
       return;
     }
 
     const parsed = basketDraftRequestSchema.safeParse(request.body);
     if (!parsed.success) {
-      response.status(400).json({
-        error: "INVALID_BASKET_DRAFT",
-        message: "Basket items and amounts are invalid.",
-      });
+      sendApiError(
+        response,
+        400,
+        "INVALID_BASKET_DRAFT",
+        "Basket items and amounts are invalid.",
+      );
       return;
     }
 
@@ -194,10 +210,12 @@ export function createApp(
     });
 
     if (resolvedItems.some((item) => item === null)) {
-      response.status(400).json({
-        error: "BASKET_ITEM_NOT_ELIGIBLE",
-        message: "One or more basket items are no longer eligible.",
-      });
+      sendApiError(
+        response,
+        400,
+        "BASKET_ITEM_NOT_ELIGIBLE",
+        "One or more basket items are no longer eligible.",
+      );
       return;
     }
 
@@ -224,7 +242,7 @@ export function createApp(
       ).rows[0]?.id;
 
     if (!basketId) {
-      response.status(500).json({ error: "BASKET_DRAFT_SAVE_FAILED" });
+      sendApiError(response, 500, "BASKET_DRAFT_SAVE_FAILED");
       return;
     }
 
@@ -250,24 +268,26 @@ export function createApp(
   });
 
   app.post("/api/baskets/review", async (request, response) => {
-    const userId = await resolveInternalUserId(database, request);
+    const userId = await resolveInternalUserId(authProvider, request);
     if (!userId) {
-      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      sendApiError(response, 401, "AUTH_TOKEN_REQUIRED");
       return;
     }
 
     const parsed = basketReviewRequestSchema.safeParse(request.body);
     if (!parsed.success) {
-      response.status(400).json({
-        error: "INVALID_BASKET",
-        message: "Basket items and amounts are invalid.",
-      });
+      sendApiError(
+        response,
+        400,
+        "INVALID_BASKET",
+        "Basket items and amounts are invalid.",
+      );
       return;
     }
 
     const idempotencyKey = request.header("idempotency-key");
     if (!idempotencyKey || idempotencyKey.length > 120) {
-      response.status(400).json({ error: "IDEMPOTENCY_KEY_REQUIRED" });
+      sendApiError(response, 400, "IDEMPOTENCY_KEY_REQUIRED");
       return;
     }
 
@@ -289,10 +309,12 @@ export function createApp(
     });
 
     if (resolvedItems.some((item) => item === null)) {
-      response.status(400).json({
-        error: "BASKET_ITEM_NOT_ELIGIBLE",
-        message: "One or more basket items are no longer eligible.",
-      });
+      sendApiError(
+        response,
+        400,
+        "BASKET_ITEM_NOT_ELIGIBLE",
+        "One or more basket items are no longer eligible.",
+      );
       return;
     }
     const validItems = resolvedItems.filter(
@@ -364,7 +386,7 @@ export function createApp(
         );
     const basketId = basket.rows[0]?.id;
     if (!basketId) {
-      response.status(500).json({ error: "BASKET_CREATE_FAILED" });
+      sendApiError(response, 500, "BASKET_CREATE_FAILED");
       return;
     }
 
@@ -396,7 +418,7 @@ export function createApp(
     );
     const orderId = order.rows[0]?.id;
     if (!orderId) {
-      response.status(500).json({ error: "ORDER_CREATE_FAILED" });
+      sendApiError(response, 500, "ORDER_CREATE_FAILED");
       return;
     }
 
@@ -418,36 +440,123 @@ export function createApp(
   });
 
   app.post("/api/auth/bootstrap", async (request, response) => {
-    const appId = process.env.PRIVY_APP_ID;
-    const appSecret = process.env.PRIVY_APP_SECRET;
-    const authorization = request.header("authorization");
-    const accessToken = authorization?.startsWith("Bearer ")
-      ? authorization.slice("Bearer ".length)
-      : undefined;
+    const accessToken = bearerToken(request);
 
-    if (!appId || !appSecret) {
-      response.status(503).json({
-        error: "PRIVY_SERVER_NOT_CONFIGURED",
-        message: "Privy server credentials are not configured.",
-      });
+    if (!authProvider.configured()) {
+      sendApiError(
+        response,
+        503,
+        "PRIVY_SERVER_NOT_CONFIGURED",
+        "Privy server credentials are not configured.",
+      );
       return;
     }
     if (!accessToken) {
-      response.status(401).json({ error: "AUTH_TOKEN_REQUIRED" });
+      sendApiError(response, 401, "AUTH_TOKEN_REQUIRED");
       return;
     }
 
     try {
-      const privy = new PrivyClient({ appId, appSecret });
-      const claims = await privy.utils().auth().verifyAuthToken(accessToken);
-      const account = await bootstrapAccount(database, privy, claims.user_id);
+      const account = await authProvider.bootstrap(accessToken);
       response.json(account);
-    } catch {
-      response.status(401).json({ error: "INVALID_AUTH_TOKEN" });
+    } catch (error) {
+      if (error instanceof AuthTokenError) {
+        sendApiError(response, 401, "INVALID_AUTH_TOKEN");
+        return;
+      }
+      console.error("Account bootstrap failed", {
+        requestId: response.locals.requestId,
+        error,
+      });
+      sendApiError(
+        response,
+        503,
+        "ACCOUNT_BOOTSTRAP_UNAVAILABLE",
+        "Account bootstrap is temporarily unavailable.",
+      );
     }
   });
 
   return app;
+}
+
+function sendApiError(
+  response: express.Response,
+  status: number,
+  error: string,
+  message?: string,
+) {
+  response.status(status).json({
+    error,
+    ...(message ? { message } : {}),
+    requestId: response.locals.requestId,
+  });
+}
+
+export type AuthProvider = {
+  configured(): boolean;
+  bootstrap(accessToken: string): Promise<AccountBootstrapResponse>;
+  resolveActiveUserId(accessToken: string): Promise<string | null>;
+};
+
+export class AuthTokenError extends Error {
+  constructor(message = "INVALID_AUTH_TOKEN") {
+    super(message);
+    this.name = "AuthTokenError";
+  }
+}
+
+type PrivyServerConfig = {
+  appId?: string | undefined;
+  appSecret?: string | undefined;
+};
+
+export function createPrivyAuthProvider(
+  database: Database,
+  config: PrivyServerConfig = {
+    appId: process.env.PRIVY_APP_ID,
+    appSecret: process.env.PRIVY_APP_SECRET,
+  },
+): AuthProvider {
+  return {
+    configured() {
+      return Boolean(config.appId && config.appSecret);
+    },
+    async bootstrap(accessToken) {
+      const privy = createPrivyClient(config);
+      let claims: { user_id: string };
+      try {
+        claims = await privy.utils().auth().verifyAuthToken(accessToken);
+      } catch {
+        throw new AuthTokenError();
+      }
+      return bootstrapAccount(database, privy, claims.user_id);
+    },
+    async resolveActiveUserId(accessToken) {
+      try {
+        const privy = createPrivyClient(config);
+        const claims = await privy.utils().auth().verifyAuthToken(accessToken);
+        const result = await database.query<{ id: string }>(
+          `
+            select u.id
+            from app.users u
+            join app.auth_identities i on i.user_id = u.id
+            where i.provider = 'privy' and i.external_subject = $1 and u.status = 'active'
+          `,
+          [claims.user_id],
+        );
+        return result.rows[0]?.id ?? null;
+      } catch {
+        return null;
+      }
+    },
+  };
+}
+
+function createPrivyClient(config: PrivyServerConfig) {
+  const { appId, appSecret } = config;
+  if (!appId || !appSecret) throw new Error("PRIVY_SERVER_NOT_CONFIGURED");
+  return new PrivyClient({ appId, appSecret });
 }
 
 async function readDraftBasket(database: Database, basketId: string) {
@@ -496,31 +605,17 @@ function feedOrderKey(seed: string, id: string) {
 }
 
 async function resolveInternalUserId(
-  database: Database,
+  authProvider: AuthProvider,
   request: express.Request,
 ): Promise<string | null> {
-  const appId = process.env.PRIVY_APP_ID;
-  const appSecret = process.env.PRIVY_APP_SECRET;
+  const accessToken = bearerToken(request);
+  if (!authProvider.configured() || !accessToken) return null;
+  return authProvider.resolveActiveUserId(accessToken);
+}
+
+function bearerToken(request: express.Request): string | undefined {
   const authorization = request.header("authorization");
-  const accessToken = authorization?.startsWith("Bearer ")
+  return authorization?.startsWith("Bearer ")
     ? authorization.slice("Bearer ".length)
     : undefined;
-  if (!appId || !appSecret || !accessToken) return null;
-
-  try {
-    const privy = new PrivyClient({ appId, appSecret });
-    const claims = await privy.utils().auth().verifyAuthToken(accessToken);
-    const result = await database.query<{ id: string }>(
-      `
-        select u.id
-        from app.users u
-        join app.auth_identities i on i.user_id = u.id
-        where i.provider = 'privy' and i.external_subject = $1 and u.status = 'active'
-      `,
-      [claims.user_id],
-    );
-    return result.rows[0]?.id ?? null;
-  } catch {
-    return null;
-  }
 }
