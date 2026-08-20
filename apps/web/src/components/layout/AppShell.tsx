@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ServiceStatus } from "../../app/use-service-health";
 import { useAuth } from "../../auth/auth-context";
 import { reviewBasket } from "../../services/api";
@@ -57,6 +57,22 @@ export function AppShell({
     basket.entries.every(
       (entry) => Number.isFinite(entry.amountUsd) && entry.amountUsd >= 0.1,
     );
+  const basketFingerprint = useMemo(
+    () =>
+      JSON.stringify(
+        basket.entries.map(({ id, kind, amountUsd }) => ({
+          id,
+          kind,
+          amountUsd,
+        })),
+      ),
+    [basket.entries],
+  );
+
+  const idempotencyKey = useMemo(
+    () => idempotencyKeyForBasket(basketFingerprint),
+    [basketFingerprint],
+  );
 
   const preparedForCurrentBasket = Boolean(
     preparedReview &&
@@ -88,6 +104,7 @@ export function AppShell({
           amountUsd,
         })),
         accessToken,
+        idempotencyKey,
       );
       setPreparedReview(review);
     } catch {
@@ -282,6 +299,19 @@ export function AppShell({
                     Each selection must have an amount of at least $0.10.
                   </p>
                 ) : null}
+                {basket.syncStatus === "loading" ||
+                basket.syncStatus === "saving" ? (
+                  <p className="basket-prepared-note" role="status">
+                    Saving basket changes…
+                  </p>
+                ) : basket.syncError ? (
+                  <p className="basket-validation-note" role="alert">
+                    {basket.syncError}{" "}
+                    <button type="button" onClick={basket.retrySync}>
+                      Retry sync
+                    </button>
+                  </p>
+                ) : null}
               </div>
               <aside className="basket-policy-rail">
                 <h3>Policy checks</h3>
@@ -335,7 +365,10 @@ export function AppShell({
                   !basketIsValid ||
                   preparing ||
                   preparedForCurrentBasket ||
-                  !auth.accountReady
+                  !auth.accountReady ||
+                  basket.syncStatus === "loading" ||
+                  basket.syncStatus === "saving" ||
+                  basket.syncStatus === "error"
                 }
                 title={
                   auth.accountReady
@@ -371,4 +404,8 @@ export function AppShell({
       </nav>
     </div>
   );
+}
+
+function idempotencyKeyForBasket(_basketFingerprint: string) {
+  return crypto.randomUUID();
 }
