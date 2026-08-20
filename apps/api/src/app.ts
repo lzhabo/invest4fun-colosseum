@@ -4,6 +4,7 @@ import {
   basketDraftRequestSchema,
   basketReviewRequestSchema,
   type FeedItem,
+  type Idea,
   marketChartPeriodSchema,
 } from "@invest4fun/contracts";
 import type { Database } from "@invest4fun/database";
@@ -12,8 +13,9 @@ import express from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { bootstrapAccount } from "./account-bootstrap.js";
-import { feedCatalog, feedItems, ideas } from "./catalog.js";
+import { feedCatalog, feedItems, ideaCatalog } from "./catalog.js";
 import type { FeedCatalogProvider } from "./providers/catalog-provider.js";
+import type { IdeasProvider } from "./providers/ideas-provider.js";
 import type {
   MarketChartProvider,
   MarketDetailsProvider,
@@ -25,6 +27,7 @@ export function createApp(
   chartProvider?: MarketChartProvider,
   detailsProvider?: MarketDetailsProvider,
   authProvider: AuthProvider = createPrivyAuthProvider(database),
+  ideasProvider: IdeasProvider = ideaCatalog,
 ) {
   const app = express();
   app.disable("x-powered-by");
@@ -148,9 +151,18 @@ export function createApp(
       sendApiError(response, 503, "MARKET_CHART_UNAVAILABLE");
     }
   });
-  app.get("/api/ideas", (_request, response) =>
-    response.json({ items: ideas }),
-  );
+  app.get("/api/ideas", async (_request, response) => {
+    try {
+      response.json({ items: await ideasProvider.getItems() });
+    } catch {
+      sendApiError(
+        response,
+        503,
+        "IDEAS_CATALOG_UNAVAILABLE",
+        "Investment ideas are temporarily unavailable.",
+      );
+    }
+  });
 
   app.get("/api/baskets/draft", async (request, response) => {
     const userId = await resolveInternalUserId(authProvider, request);
@@ -198,8 +210,9 @@ export function createApp(
     }
 
     const catalogItems = await catalogProvider.getItems();
+    const ideaItems = await ideasProvider.getItems();
     const resolvedItems = parsed.data.items.map((item) =>
-      resolveBasketInput(item, catalogItems),
+      resolveBasketInput(item, catalogItems, ideaItems),
     );
 
     if (resolvedItems.some((item) => item === null)) {
@@ -246,10 +259,18 @@ export function createApp(
       await database.query(
         `
           insert into app.basket_items
-            (basket_id, source_kind, source_id, title_snapshot, amount_cents)
-          values ($1, $2, $3, $4, $5)
+            (basket_id, source_kind, source_id, source_version_id, title_snapshot, source_snapshot, amount_cents)
+          values ($1, $2, $3, $4, $5, $6::jsonb, $7)
         `,
-        [basketId, item.kind, item.id, item.title, item.amountCents],
+        [
+          basketId,
+          item.kind,
+          item.id,
+          item.sourceVersionId,
+          item.title,
+          JSON.stringify(item.sourceSnapshot),
+          item.amountCents,
+        ],
       );
     }
     await database.query(
@@ -285,8 +306,9 @@ export function createApp(
     }
 
     const catalogItems = await catalogProvider.getItems();
+    const ideaItems = await ideasProvider.getItems();
     const resolvedItems = parsed.data.items.map((item) =>
-      resolveBasketInput(item, catalogItems),
+      resolveBasketInput(item, catalogItems, ideaItems),
     );
 
     if (resolvedItems.some((item) => item === null)) {
@@ -319,10 +341,12 @@ export function createApp(
       const existingItems = await database.query<{
         source_kind: "asset" | "idea";
         source_id: string;
+        source_version_id: string | null;
+        source_snapshot: unknown;
         title_snapshot: string;
         amount_cents: number;
       }>(
-        `select source_kind, source_id, title_snapshot, amount_cents from app.basket_items where basket_id = $1 order by created_at asc`,
+        `select source_kind, source_id, source_version_id, source_snapshot, title_snapshot, amount_cents from app.basket_items where basket_id = $1 order by created_at asc`,
         [existing.basket_id],
       );
       return response.json({
@@ -338,6 +362,8 @@ export function createApp(
             id: item.source_id,
             kind: item.source_kind,
             title: item.title_snapshot,
+            sourceVersionId: item.source_version_id,
+            sourceSnapshot: item.source_snapshot,
             amountUsd: item.amount_cents / 100,
           })),
         },
@@ -378,10 +404,18 @@ export function createApp(
       await database.query(
         `
           insert into app.basket_items
-            (basket_id, source_kind, source_id, title_snapshot, amount_cents)
-          values ($1, $2, $3, $4, $5)
+            (basket_id, source_kind, source_id, source_version_id, title_snapshot, source_snapshot, amount_cents)
+          values ($1, $2, $3, $4, $5, $6::jsonb, $7)
         `,
-        [basketId, item.kind, item.id, item.title, item.amountCents],
+        [
+          basketId,
+          item.kind,
+          item.id,
+          item.sourceVersionId,
+          item.title,
+          JSON.stringify(item.sourceSnapshot),
+          item.amountCents,
+        ],
       );
     }
     await database.query(
@@ -413,6 +447,8 @@ export function createApp(
           id: item.id,
           kind: item.kind,
           title: item.title,
+          sourceVersionId: item.sourceVersionId,
+          sourceSnapshot: item.sourceSnapshot,
           amountUsd: item.amountCents / 100,
         })),
       },
@@ -477,11 +513,12 @@ function sendApiError(
 function resolveBasketInput(
   item: { id: string; kind: "asset" | "idea"; amountUsd: number },
   catalogItems: FeedItem[],
+  ideaItems: Idea[],
 ) {
   const catalogItem =
     item.kind === "asset"
       ? catalogItems.find((asset) => asset.id === item.id)
-      : ideas.find((idea) => idea.id === item.id);
+      : ideaItems.find((idea) => idea.id === item.id);
   if (!catalogItem) return null;
   if (
     item.kind === "asset" &&
@@ -489,13 +526,72 @@ function resolveBasketInput(
   ) {
     return null;
   }
+  if (item.kind === "idea") {
+    const idea = catalogItem as Idea;
+    const resolvedComponents = resolveIdeaComponents(idea, catalogItems);
+    if (
+      idea.status !== "active" ||
+      Math.round(item.amountUsd * 100) < idea.minimumInvestmentCents ||
+      !resolvedComponents
+    ) {
+      return null;
+    }
+  }
   return {
     ...item,
     title:
       item.kind === "asset"
         ? (catalogItem as FeedItem).name
-        : (catalogItem as (typeof ideas)[number]).title,
+        : (catalogItem as Idea).title,
+    sourceVersionId:
+      item.kind === "idea" ? (catalogItem as Idea).version.id : null,
+    sourceSnapshot:
+      item.kind === "idea"
+        ? ideaBasketSnapshot(catalogItem as Idea, catalogItems)
+        : assetBasketSnapshot(catalogItem as FeedItem),
     amountCents: Math.round(item.amountUsd * 100),
+  };
+}
+
+function assetBasketSnapshot(asset: FeedItem) {
+  return {
+    type: "asset",
+    assetId: asset.canonicalId,
+    symbol: asset.symbol,
+    name: asset.name,
+    eligibility: asset.eligibility,
+  };
+}
+
+function resolveIdeaComponents(idea: Idea, catalogItems: FeedItem[]) {
+  const resolved = idea.version.components.map((component) => {
+    const asset = catalogItems.find((item) => item.id === component.assetId);
+    if (!asset?.eligibility.executable) return null;
+    return { component, asset };
+  });
+  if (resolved.some((component) => component === null)) return null;
+  return resolved as Array<{
+    component: Idea["version"]["components"][number];
+    asset: FeedItem;
+  }>;
+}
+
+function ideaBasketSnapshot(idea: Idea, catalogItems: FeedItem[]) {
+  const resolvedComponents = resolveIdeaComponents(idea, catalogItems) ?? [];
+  return {
+    type: "idea",
+    ideaId: idea.id,
+    ideaVersionId: idea.version.id,
+    title: idea.title,
+    riskLabel: idea.riskLabel,
+    source: idea.source,
+    components: resolvedComponents.map(({ component, asset }) => ({
+      assetId: component.assetId,
+      symbol: asset.symbol,
+      name: asset.name,
+      weightBps: component.weightBps,
+      order: component.order,
+    })),
   };
 }
 
@@ -569,11 +665,13 @@ async function readDraftBasket(database: Database, basketId: string) {
   const items = await database.query<{
     source_kind: "asset" | "idea";
     source_id: string;
+    source_version_id: string | null;
+    source_snapshot: unknown;
     title_snapshot: string;
     amount_cents: number;
   }>(
     `
-      select source_kind, source_id, title_snapshot, amount_cents
+      select source_kind, source_id, source_version_id, source_snapshot, title_snapshot, amount_cents
       from app.basket_items
       where basket_id = $1
       order by created_at asc
@@ -590,6 +688,8 @@ async function readDraftBasket(database: Database, basketId: string) {
       id: item.source_id,
       kind: item.source_kind,
       title: item.title_snapshot,
+      sourceVersionId: item.source_version_id,
+      sourceSnapshot: item.source_snapshot,
       amountUsd: item.amount_cents / 100,
     })),
   };

@@ -129,12 +129,53 @@ export const feedItemSchema = z
     },
   );
 
+export const ideaSourceSchema = z.object({
+  type: z.enum(["curated", "partner", "user"]),
+  label: z.string().min(1),
+  url: z.string().url().nullable(),
+});
+
+export const ideaComponentSchema = z.object({
+  assetId: z.string().regex(/^solana:[1-9A-HJ-NP-Za-km-z]{32,}$/),
+  symbol: z.string().min(1),
+  name: z.string().min(1),
+  iconUrl: z.string().url().nullable().optional(),
+  weightBps: z.number().int().min(1).max(10_000),
+  order: z.number().int().nonnegative(),
+  rationale: z.string().min(1).optional(),
+});
+
+export const ideaVersionSchema = z
+  .object({
+    id: z.string().min(1),
+    version: z.number().int().positive(),
+    effectiveAt: z.string().datetime(),
+    totalWeightBps: z.literal(10_000),
+    components: z.array(ideaComponentSchema).min(1).max(25),
+  })
+  .refine(
+    (version) =>
+      version.components.reduce(
+        (total, component) => total + component.weightBps,
+        0,
+      ) === version.totalWeightBps,
+    {
+      message: "Idea component weights must sum to totalWeightBps",
+      path: ["components"],
+    },
+  );
+
 export const ideaSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
+  subtitle: z.string().min(1).optional(),
   description: z.string().min(1),
+  details: z.string().min(1).optional(),
   riskLabel: z.enum(["lower", "medium", "higher"]),
-  positions: z.array(assetSchema).min(1),
+  status: z.enum(["active", "paused", "retired"]),
+  minimumInvestmentCents: z.number().int().min(10),
+  source: ideaSourceSchema,
+  version: ideaVersionSchema,
 });
 
 export const feedResponseSchema = z.object({
@@ -180,6 +221,9 @@ export type AssetEligibility = z.infer<typeof assetEligibilitySchema>;
 export type MarketDataStatus = z.infer<typeof marketDataStatusSchema>;
 export type MarketSnapshot = z.infer<typeof marketSnapshotSchema>;
 export type FeedItem = z.infer<typeof feedItemSchema>;
+export type IdeaSource = z.infer<typeof ideaSourceSchema>;
+export type IdeaComponent = z.infer<typeof ideaComponentSchema>;
+export type IdeaVersion = z.infer<typeof ideaVersionSchema>;
 export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
 export type MarketChartPeriod = z.infer<typeof marketChartPeriodSchema>;
@@ -209,6 +253,8 @@ export const basketReviewResponseSchema = z.object({
     items: z.array(
       basketEntryRequestSchema.extend({
         title: z.string().min(1),
+        sourceVersionId: z.string().min(1).nullable().optional(),
+        sourceSnapshot: z.unknown().optional(),
       }),
     ),
   }),
@@ -226,6 +272,8 @@ export const basketDraftSchema = z.object({
   items: z.array(
     basketEntryRequestSchema.extend({
       title: z.string().min(1),
+      sourceVersionId: z.string().min(1).nullable().optional(),
+      sourceSnapshot: z.unknown().optional(),
     }),
   ),
 });

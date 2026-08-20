@@ -43,6 +43,7 @@ export function IdeasScreen() {
   const [index, setIndex] = useState(0);
   const [feedback, setFeedback] = useState<Feedback>();
   const [dragX, setDragX] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const pointerStart = useRef<{ id: number; x: number } | null>(null);
   const feedbackTimer = useRef<number | undefined>(undefined);
@@ -51,11 +52,17 @@ export function IdeasScreen() {
   useEffect(() => {
     const controller = new AbortController();
     getIdeas(controller.signal)
-      .then((response) => setIdeas(response.items))
+      .then((response) => {
+        setIdeas(response.items);
+        setError(false);
+      })
       .catch((reason: unknown) => {
         if (reason instanceof DOMException && reason.name === "AbortError")
           return;
         setError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
   }, []);
@@ -145,6 +152,18 @@ export function IdeasScreen() {
     );
   }
 
+  if (loading) {
+    return (
+      <main className="legacy-page ideas-page">
+        <section className="ideas-workspace">
+          <div className="feed-loading" role="status">
+            Loading prepared ideas...
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="legacy-page ideas-page">
       <section className="ideas-workspace">
@@ -197,23 +216,22 @@ export function IdeasScreen() {
                 <div>
                   <div className="legacy-card-meta">
                     <span>{active.riskLabel} risk</span>
-                    <span>{active.positions.length} assets</span>
+                    <span>{active.version.components.length} assets</span>
                   </div>
                   <h2>{active.title}</h2>
+                  {active.subtitle ? <p>{active.subtitle}</p> : null}
                 </div>
               </div>
               <div className="idea-card-visual">
                 <div className="idea-allocation-ring" aria-hidden="true">
-                  <span>
-                    {Math.round((active.positions.length / 5) * 100)}%
-                  </span>
-                  <small>curated mix</small>
+                  <span>{active.version.totalWeightBps / 100}%</span>
+                  <small>allocated</small>
                 </div>
                 <div className="idea-allocation-bars" aria-hidden="true">
-                  {active.positions.map((position, positionIndex) => (
+                  {active.version.components.map((component, positionIndex) => (
                     <AllocationBar
-                      key={position.symbol}
-                      $width={100 / active.positions.length}
+                      key={component.assetId}
+                      $width={component.weightBps / 100}
                       $opacity={1 - positionIndex * 0.08}
                     />
                   ))}
@@ -222,13 +240,22 @@ export function IdeasScreen() {
               <div className="idea-card-copy">
                 <p>{active.description}</p>
                 <div className="idea-position-list">
-                  {active.positions.map((position) => (
-                    <span key={position.symbol}>{position.symbol}</span>
+                  {active.version.components.map((component) => (
+                    <span key={component.assetId}>
+                      {component.symbol} {component.weightBps / 100}%
+                    </span>
                   ))}
                 </div>
                 <small>
-                  Prepared idea · allocation details will be shown at review.
+                  {active.source.label} · minimum $
+                  {(active.minimumInvestmentCents / 100).toLocaleString(
+                    undefined,
+                    {
+                      maximumFractionDigits: 0,
+                    },
+                  )}
                 </small>
+                {active.details ? <small>{active.details}</small> : null}
               </div>
             </IdeaSwipeCard>
 

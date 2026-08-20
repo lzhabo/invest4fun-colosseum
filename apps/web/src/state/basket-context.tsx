@@ -15,14 +15,15 @@ export type BasketEntry = {
   kind: "asset" | "idea";
   amountUsd: number;
 };
+type BasketSource = Pick<BasketEntry, "id" | "kind">;
 
 type BasketContextValue = {
   entries: BasketEntry[];
   count: number;
   isOpen: boolean;
   add: (entry: BasketEntry) => void;
-  updateAmount: (id: string, amountUsd: number) => void;
-  remove: (id: string) => void;
+  updateAmount: (source: BasketSource, amountUsd: number) => void;
+  remove: (source: BasketSource) => void;
   clear: () => void;
   open: () => void;
   close: () => void;
@@ -136,18 +137,20 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
       isOpen,
       add: (entry) =>
         setEntries((current) =>
-          current.some((item) => item.id === entry.id)
+          current.some((item) => sameBasketSource(item, entry))
             ? current
             : [...current, { ...entry, amountUsd: entry.amountUsd ?? 50 }],
         ),
-      updateAmount: (id, amountUsd) =>
+      updateAmount: (source, amountUsd) =>
         setEntries((current) =>
           current.map((entry) =>
-            entry.id === id ? { ...entry, amountUsd } : entry,
+            sameBasketSource(entry, source) ? { ...entry, amountUsd } : entry,
           ),
         ),
-      remove: (id) =>
-        setEntries((current) => current.filter((entry) => entry.id !== id)),
+      remove: (source) =>
+        setEntries((current) =>
+          current.filter((entry) => !sameBasketSource(entry, source)),
+        ),
       clear: () => setEntries([]),
       open: () => setIsOpen(true),
       close: () => setIsOpen(false),
@@ -158,6 +161,10 @@ export function BasketProvider({ children }: { children: React.ReactNode }) {
   return (
     <BasketContext.Provider value={value}>{children}</BasketContext.Provider>
   );
+}
+
+function sameBasketSource(left: BasketSource, right: BasketSource) {
+  return left.kind === right.kind && left.id === right.id;
 }
 
 export function useBasket() {
