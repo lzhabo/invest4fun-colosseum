@@ -539,6 +539,7 @@ export function FeedScreen() {
   const feedbackTimer = useRef<number | undefined>(undefined);
   const basket = useBasket();
   const active = feed[index];
+  const canAddActive = active?.eligibility.executable === true;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -599,6 +600,7 @@ export function FeedScreen() {
 
   const advance = (invest: boolean) => {
     if (!active || feedback) return;
+    if (invest && !active.eligibility.executable) return;
     if (invest)
       basket.add({
         id: active.id,
@@ -706,9 +708,9 @@ export function FeedScreen() {
                 </span>
               ) : active ? (
                 <span className="source-note">
-                  {active.marketDataUpdatedAt
-                    ? `Market data updated ${relativeTime(active.marketDataUpdatedAt)}`
-                    : "Curated asset data"}
+                  {active.marketDataAsOf
+                    ? `${active.marketDataStatus === "stale" ? "Stale" : "Market"} data from ${active.marketDataSource} as of ${relativeTime(active.marketDataAsOf)}`
+                    : `${active.marketDataStatus === "degraded" ? "Degraded" : "Curated"} asset data`}
                 </span>
               ) : null}
             </FeedHeading>
@@ -932,15 +934,24 @@ export function FeedScreen() {
                       {active.riskLabel} risk
                     </RiskLabel>
                     <p>{active.rationale}</p>
-                    <small>Source: {active.sourceLabel}</small>
+                    <small>
+                      Source: {active.sourceLabel}
+                      {active.eligibility.executable
+                        ? " · Executable asset"
+                        : ` · Not tradable: ${active.eligibility.reasonCodes.join(", ")}`}
+                    </small>
                   </div>
                 </SwipeCard>
 
                 <button
                   type="button"
                   className="gesture gesture-add"
-                  aria-label={`Add ${active.name} to basket`}
-                  disabled={Boolean(feedback)}
+                  aria-label={
+                    canAddActive
+                      ? `Add ${active.name} to basket`
+                      : `${active.name} is not tradable yet`
+                  }
+                  disabled={Boolean(feedback) || !canAddActive}
                   onClick={handleAdd}
                 >
                   <span>
@@ -991,7 +1002,7 @@ export function FeedScreen() {
                 type="button"
                 className="feed-action feed-action-add"
                 onClick={handleAdd}
-                disabled={!active || Boolean(feedback)}
+                disabled={!active || Boolean(feedback) || !canAddActive}
               >
                 Add {ticketAmount} USDC <ChevronRight aria-hidden="true" />
               </button>

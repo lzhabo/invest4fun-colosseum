@@ -4,6 +4,7 @@ import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import { bootstrapAccount } from "./account-bootstrap.js";
 import { type AuthProvider, AuthTokenError, createApp } from "./app.js";
+import { feedItems } from "./catalog.js";
 
 function database(ping: () => Promise<void>, query = vi.fn()): Database {
   return { ping, query, close: vi.fn() };
@@ -200,6 +201,109 @@ describe("auth bootstrap", () => {
     expect(resolveActiveUserId).toHaveBeenCalledWith("verified-token");
     expect(query).toHaveBeenCalledWith(expect.any(String), [verifiedUserId]);
     expect(response.body).toEqual({ basket: null });
+  });
+
+  it("rejects non-executable placeholder assets during basket review", async () => {
+    const response = await request(
+      createApp(
+        database(vi.fn()),
+        undefined,
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .post("/api/baskets/review")
+      .set("Authorization", "Bearer verified-token")
+      .set("Idempotency-Key", "r2-placeholder-safety")
+      .send({
+        items: [
+          {
+            id: "product-placeholder:clmt",
+            kind: "asset",
+            amountUsd: 50,
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+  });
+
+  it("rejects non-executable placeholder assets during basket draft save", async () => {
+    const response = await request(
+      createApp(
+        database(vi.fn()),
+        undefined,
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .put("/api/baskets/draft")
+      .set("Authorization", "Bearer verified-token")
+      .send({
+        items: [
+          {
+            id: "product-placeholder:clmt",
+            kind: "asset",
+            amountUsd: 50,
+          },
+        ],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+  });
+
+  it("uses the injected catalog provider for basket eligibility", async () => {
+    const executableAsset = feedItems.find(
+      (item) => item.eligibility.executable,
+    );
+    if (!executableAsset) throw new Error("EXECUTABLE_FIXTURE_MISSING");
+    const query = vi.fn(async (text: string) => {
+      if (text.includes("insert into app.baskets")) {
+        return {
+          rows: [{ id: "44444444-4444-4444-8444-444444444444" }],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+
+    const response = await request(
+      createApp(
+        database(vi.fn(), query),
+        {
+          getItems: vi.fn(async () => [
+            {
+              ...executableAsset,
+              eligibility: {
+                ...executableAsset.eligibility,
+                tradable: false as const,
+                executable: false as const,
+                reasonCodes: ["provider_disabled"],
+              },
+            },
+          ]),
+        },
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .put("/api/baskets/draft")
+      .set("Authorization", "Bearer verified-token")
+      .send({
+        items: [{ id: executableAsset.id, kind: "asset", amountUsd: 50 }],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(query).not.toHaveBeenCalledWith(
+      expect.stringContaining("insert into app.basket_items"),
+      expect.anything(),
+    );
   });
 });
 

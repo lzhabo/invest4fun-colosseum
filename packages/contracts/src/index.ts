@@ -18,12 +18,43 @@ export const readinessResponseSchema = healthResponseSchema.extend({
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
 export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
 
-export const assetSchema = z.object({
+export const assetIdentitySchema = z.object({
   chain: z.literal("solana"),
-  mint: z.string().min(32).nullable(),
+  mint: z.string().min(32),
+});
+
+export const assetEligibilitySchema = z.object({
+  tradable: z.boolean(),
+  executable: z.boolean(),
+  reasonCodes: z.array(z.string().min(1)),
+  policyVersion: z.string().min(1),
+  checkedAt: z.string().datetime(),
+});
+
+export const marketDataStatusSchema = z.enum([
+  "fresh",
+  "stale",
+  "degraded",
+  "unavailable",
+]);
+
+export const marketSnapshotSchema = z.object({
+  source: z.enum([
+    "curated",
+    "coingecko",
+    "geckoterminal",
+    "jupiter",
+    "alchemy",
+  ]),
+  status: marketDataStatusSchema,
+  asOf: z.string().datetime().nullable(),
+  expiresAt: z.string().datetime().nullable(),
+});
+
+const assetBaseSchema = z.object({
+  chain: z.literal("solana"),
   symbol: z.string().min(1),
   name: z.string().min(1),
-  assetType: z.enum(["token", "stock"]),
   rationale: z.string().min(1),
   riskLabel: z.enum(["lower", "medium", "higher"]),
   coingeckoId: z.string().min(1).nullable().optional(),
@@ -32,9 +63,44 @@ export const assetSchema = z.object({
   marketCapUsd: z.number().nonnegative().nullable().optional(),
   volume24hUsd: z.number().nonnegative().nullable().optional(),
   priceChange24hPct: z.number().nullable().optional(),
+  eligibility: assetEligibilitySchema,
+  market: marketSnapshotSchema,
 });
 
-export const feedItemSchema = assetSchema.extend({
+export const executableEligibilitySchema = assetEligibilitySchema.extend({
+  tradable: z.literal(true),
+  executable: z.literal(true),
+  reasonCodes: z.array(z.string().min(1)).max(0),
+});
+
+export const nonExecutableEligibilitySchema = assetEligibilitySchema.extend({
+  executable: z.literal(false),
+  reasonCodes: z.array(z.string().min(1)).min(1),
+});
+
+export const tokenAssetSchema = assetBaseSchema.extend({
+  assetType: z.literal("token"),
+  mint: z.string().min(32),
+  canonicalId: z.string().regex(/^solana:[1-9A-HJ-NP-Za-km-z]{32,}$/),
+  eligibility: z.union([
+    executableEligibilitySchema,
+    nonExecutableEligibilitySchema,
+  ]),
+});
+
+export const placeholderAssetSchema = assetBaseSchema.extend({
+  assetType: z.literal("stock"),
+  mint: z.null(),
+  canonicalId: z.string().regex(/^product-placeholder:[a-z0-9-]+$/),
+  eligibility: nonExecutableEligibilitySchema,
+});
+
+export const assetSchema = z.discriminatedUnion("assetType", [
+  tokenAssetSchema,
+  placeholderAssetSchema,
+]);
+
+const feedItemFields = {
   id: z.string().min(1),
   sourceLabel: z.string().min(1),
   marketDataSource: z.enum([
@@ -45,7 +111,23 @@ export const feedItemSchema = assetSchema.extend({
     "alchemy",
   ]),
   marketDataUpdatedAt: z.string().datetime().nullable(),
-});
+  marketDataStatus: marketDataStatusSchema,
+  marketDataAsOf: z.string().datetime().nullable(),
+  marketDataExpiresAt: z.string().datetime().nullable(),
+};
+
+export const feedItemSchema = z
+  .discriminatedUnion("assetType", [
+    tokenAssetSchema.extend(feedItemFields),
+    placeholderAssetSchema.extend(feedItemFields),
+  ])
+  .refine(
+    (item: { id: string; canonicalId: string }) => item.id === item.canonicalId,
+    {
+      message: "Feed item id must match canonical asset id",
+      path: ["id"],
+    },
+  );
 
 export const ideaSchema = z.object({
   id: z.string().min(1),
@@ -66,6 +148,9 @@ export const marketChartResponseSchema = z.object({
   assetId: z.string().min(1),
   period: marketChartPeriodSchema,
   source: z.literal("coingecko"),
+  status: marketDataStatusSchema,
+  asOf: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
   updatedAt: z.string().datetime(),
   points: z.array(
     z.object({
@@ -77,6 +162,9 @@ export const marketChartResponseSchema = z.object({
 export const assetDetailsResponseSchema = z.object({
   assetId: z.string().min(1),
   source: z.literal("coingecko"),
+  status: marketDataStatusSchema,
+  asOf: z.string().datetime(),
+  expiresAt: z.string().datetime().nullable(),
   iconUrl: z.string().url().nullable(),
   categories: z.array(z.string()),
   marketCapUsd: z.number().nonnegative().nullable(),
@@ -87,6 +175,10 @@ export const assetDetailsResponseSchema = z.object({
 export const ideasResponseSchema = z.object({ items: z.array(ideaSchema) });
 
 export type Asset = z.infer<typeof assetSchema>;
+export type AssetIdentity = z.infer<typeof assetIdentitySchema>;
+export type AssetEligibility = z.infer<typeof assetEligibilitySchema>;
+export type MarketDataStatus = z.infer<typeof marketDataStatusSchema>;
+export type MarketSnapshot = z.infer<typeof marketSnapshotSchema>;
 export type FeedItem = z.infer<typeof feedItemSchema>;
 export type Idea = z.infer<typeof ideaSchema>;
 export type FeedResponse = z.infer<typeof feedResponseSchema>;
