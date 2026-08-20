@@ -233,6 +233,17 @@ export function AppShell({
                               ? "Prepared idea"
                               : "Direct asset"}
                           </small>
+                          {entry.sourceSnapshot?.type === "idea" ? (
+                            <small>
+                              {entry.sourceSnapshot.components
+                                .sort((left, right) => left.order - right.order)
+                                .map(
+                                  (component) =>
+                                    `${component.symbol} ${(component.weightBps / 100).toFixed(0)}%`,
+                                )
+                                .join(" · ")}
+                            </small>
+                          ) : null}
                         </div>
                         <label className="basket-amount-field">
                           <span className="sr-only">
