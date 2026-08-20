@@ -1,3 +1,4 @@
+import type { BasketSourceSnapshot } from "@invest4fun/contracts";
 import {
   createContext,
   useContext,
@@ -15,7 +16,7 @@ export type BasketEntry = {
   kind: "asset" | "idea";
   amountUsd: number;
   sourceVersionId?: string | null | undefined;
-  sourceSnapshot?: unknown | undefined;
+  sourceSnapshot?: BasketSourceSnapshot | undefined;
 };
 type BasketSource = Pick<BasketEntry, "id" | "kind">;
 export type BasketSyncStatus =
@@ -215,7 +216,7 @@ function toBasketEntry(entry: {
   kind: "asset" | "idea";
   amountUsd: number;
   sourceVersionId?: string | null | undefined;
-  sourceSnapshot?: unknown | undefined;
+  sourceSnapshot?: BasketSourceSnapshot | undefined;
 }): BasketEntry {
   return entry;
 }

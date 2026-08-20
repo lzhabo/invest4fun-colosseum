@@ -245,6 +245,37 @@ export const basketDraftRequestSchema = z.object({
   items: z.array(basketEntryRequestSchema).max(50),
 });
 
+export const assetBasketSnapshotSchema = z.object({
+  type: z.literal("asset"),
+  assetId: z.string().min(1),
+  symbol: z.string().min(1),
+  name: z.string().min(1),
+  eligibility: assetEligibilitySchema,
+});
+
+export const ideaBasketSnapshotSchema = z.object({
+  type: z.literal("idea"),
+  ideaId: z.string().min(1),
+  ideaVersionId: z.string().min(1),
+  title: z.string().min(1),
+  riskLabel: z.enum(["lower", "medium", "higher"]),
+  source: ideaSourceSchema,
+  components: z.array(
+    z.object({
+      assetId: z.string().min(1),
+      symbol: z.string().min(1),
+      name: z.string().min(1),
+      weightBps: z.number().int().min(1).max(10_000),
+      order: z.number().int().nonnegative(),
+    }),
+  ),
+});
+
+export const basketSourceSnapshotSchema = z.discriminatedUnion("type", [
+  assetBasketSnapshotSchema,
+  ideaBasketSnapshotSchema,
+]);
+
 export const basketReviewResponseSchema = z.object({
   basket: z.object({
     id: z.string().uuid(),
@@ -254,7 +285,7 @@ export const basketReviewResponseSchema = z.object({
       basketEntryRequestSchema.extend({
         title: z.string().min(1),
         sourceVersionId: z.string().min(1).nullable().optional(),
-        sourceSnapshot: z.unknown().optional(),
+        sourceSnapshot: basketSourceSnapshotSchema.optional(),
       }),
     ),
   }),
@@ -273,7 +304,7 @@ export const basketDraftSchema = z.object({
     basketEntryRequestSchema.extend({
       title: z.string().min(1),
       sourceVersionId: z.string().min(1).nullable().optional(),
-      sourceSnapshot: z.unknown().optional(),
+      sourceSnapshot: basketSourceSnapshotSchema.optional(),
     }),
   ),
 });
@@ -283,6 +314,7 @@ export const basketDraftResponseSchema = z.object({
 });
 
 export type BasketEntryRequest = z.infer<typeof basketEntryRequestSchema>;
+export type BasketSourceSnapshot = z.infer<typeof basketSourceSnapshotSchema>;
 export type BasketReviewRequest = z.infer<typeof basketReviewRequestSchema>;
 export type BasketReviewResponse = z.infer<typeof basketReviewResponseSchema>;
 export type BasketDraft = z.infer<typeof basketDraftSchema>;
