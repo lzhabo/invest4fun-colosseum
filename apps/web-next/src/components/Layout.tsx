@@ -1,16 +1,12 @@
 import { ROUTES } from "@src/app/routes/routes";
-import { BasketPanel } from "@src/components/BasketPanel";
-import { useStores } from "@src/stores";
+import { WalletMenu } from "@src/components/WalletMenu";
 import {
   Activity,
   BriefcaseBusiness,
   CircleUserRound,
   Lightbulb,
-  ShoppingBasket,
-  X,
 } from "lucide-react";
-import { observer } from "mobx-react-lite";
-import { type PropsWithChildren, useState } from "react";
+import type { PropsWithChildren } from "react";
 import { NavLink } from "react-router-dom";
 import styled from "styled-components";
 
@@ -64,25 +60,7 @@ const Navigation = styled.nav`
   }
 `;
 
-const BasketButton = styled.button`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: ${({ theme }) => theme.radii.pill};
-  background: ${({ theme }) => theme.colors.ink};
-  color: ${({ theme }) => theme.colors.canvas};
-  cursor: pointer;
-`;
-
-export const Layout = observer(function Layout({
-  children,
-}: PropsWithChildren) {
-  const { basketStore } = useStores();
-  const [basketOpen, setBasketOpen] = useState(false);
-
+export function Layout({ children }: PropsWithChildren) {
   return (
     <Page>
       <Header>
@@ -103,19 +81,9 @@ export const Layout = observer(function Layout({
             <span>Account</span>
           </NavLink>
         </Navigation>
-        <BasketButton
-          type="button"
-          onClick={() => setBasketOpen((open) => !open)}
-        >
-          {basketOpen ? <X size={18} /> : <ShoppingBasket size={18} />}
-          <span>{basketStore.entries.length}</span>
-          <span className="sr-only">
-            {basketOpen ? "Close basket" : "Open basket"}
-          </span>
-        </BasketButton>
+        <WalletMenu />
       </Header>
       {children}
-      {basketOpen ? <BasketPanel onClose={() => setBasketOpen(false)} /> : null}
     </Page>
   );
-});
+}
