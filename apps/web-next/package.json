@@ -1,0 +1,29 @@
+{
+  "name": "@invest4fun/web-next",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@invest4fun/contracts": "0.1.0",
+    "@privy-io/react-auth": "3.35.2",
+    "lucide-react": "^0.468.0",
+    "mobx": "^6.13.7",
+    "mobx-react-lite": "^4.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.18.2",
+    "styled-components": "^6.5.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "vite": "^7.0.6"
+  }
+}
