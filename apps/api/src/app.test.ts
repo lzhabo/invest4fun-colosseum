@@ -10,6 +10,21 @@ function database(ping: () => Promise<void>, query = vi.fn()): Database {
   return { ping, query, close: vi.fn() };
 }
 
+function emptyDraftDatabase(): Database {
+  return database(
+    vi.fn(),
+    vi.fn(async (text: string) => {
+      if (text.includes("insert into app.baskets")) {
+        return {
+          rows: [{ id: "44444444-4444-4444-8444-444444444444" }],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    }),
+  );
+}
+
 function authProvider(overrides: Partial<AuthProvider> = {}): AuthProvider {
   const account: AccountBootstrapResponse = {
     user: { id: "11111111-1111-4111-8111-111111111111", status: "active" },
@@ -62,7 +77,7 @@ describe("auth bootstrap", () => {
   it("rejects bootstrap when Privy server credentials are not configured", async () => {
     const response = await request(
       createApp(
-        database(vi.fn()),
+        emptyDraftDatabase(),
         undefined,
         undefined,
         undefined,
@@ -200,10 +215,10 @@ describe("auth bootstrap", () => {
     expect(response.status).toBe(200);
     expect(resolveActiveUserId).toHaveBeenCalledWith("verified-token");
     expect(query).toHaveBeenCalledWith(expect.any(String), [verifiedUserId]);
-    expect(response.body).toEqual({ basket: null });
+    expect(response.body).toEqual({ basket: null, unavailableItems: [] });
   });
 
-  it("rejects non-executable placeholder assets during basket review", async () => {
+  it("returns unavailable non-executable placeholder assets during basket review", async () => {
     const response = await request(
       createApp(
         database(vi.fn()),
@@ -226,14 +241,22 @@ describe("auth bootstrap", () => {
         ],
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(response.status).toBe(422);
+    expect(response.body.unavailableItems).toEqual([
+      {
+        id: "product-placeholder:clmt",
+        kind: "asset",
+        amountUsd: 50,
+        reason: expect.any(String),
+      },
+    ]);
+    expect(response.body.error).toBe("BASKET_HAS_NO_ELIGIBLE_ITEMS");
   });
 
-  it("rejects non-executable placeholder assets during basket draft save", async () => {
+  it("returns unavailable non-executable placeholder assets during basket draft save", async () => {
     const response = await request(
       createApp(
-        database(vi.fn()),
+        emptyDraftDatabase(),
         undefined,
         undefined,
         undefined,
@@ -252,8 +275,16 @@ describe("auth bootstrap", () => {
         ],
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(response.status).toBe(200);
+    expect(response.body.unavailableItems).toEqual([
+      {
+        id: "product-placeholder:clmt",
+        kind: "asset",
+        amountUsd: 50,
+        reason: expect.any(String),
+      },
+    ]);
+    expect(response.body.basket.items).toEqual([]);
   });
 
   it("uses the injected catalog provider for basket eligibility", async () => {
@@ -298,8 +329,15 @@ describe("auth bootstrap", () => {
         items: [{ id: executableAsset.id, kind: "asset", amountUsd: 50 }],
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(response.status).toBe(200);
+    expect(response.body.unavailableItems).toEqual([
+      {
+        id: executableAsset.id,
+        kind: "asset",
+        amountUsd: 50,
+        reason: expect.any(String),
+      },
+    ]);
     expect(query).not.toHaveBeenCalledWith(
       expect.stringContaining("insert into app.basket_items"),
       expect.anything(),
@@ -347,7 +385,7 @@ describe("auth bootstrap", () => {
     );
     const response = await request(
       createApp(
-        database(vi.fn()),
+        emptyDraftDatabase(),
         { getItems: vi.fn(async () => disabledCatalog) },
         undefined,
         undefined,
@@ -361,8 +399,15 @@ describe("auth bootstrap", () => {
         items: [{ id: selectedIdea.id, kind: "idea", amountUsd: 50 }],
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(response.status).toBe(422);
+    expect(response.body.unavailableItems).toEqual([
+      {
+        id: selectedIdea.id,
+        kind: "idea",
+        amountUsd: 50,
+        reason: expect.any(String),
+      },
+    ]);
   });
 
   it("rejects ideas whose holdings are absent from the injected catalog", async () => {
@@ -370,7 +415,7 @@ describe("auth bootstrap", () => {
     if (!selectedIdea) throw new Error("IDEA_FIXTURE_MISSING");
     const response = await request(
       createApp(
-        database(vi.fn()),
+        emptyDraftDatabase(),
         { getItems: vi.fn(async () => []) },
         undefined,
         undefined,
@@ -383,8 +428,163 @@ describe("auth bootstrap", () => {
         items: [{ id: selectedIdea.id, kind: "idea", amountUsd: 50 }],
       });
 
-    expect(response.status).toBe(400);
-    expect(response.body.error).toBe("BASKET_ITEM_NOT_ELIGIBLE");
+    expect(response.status).toBe(200);
+    expect(response.body.unavailableItems).toEqual([
+      {
+        id: selectedIdea.id,
+        kind: "idea",
+        amountUsd: 50,
+        reason: expect.any(String),
+      },
+    ]);
+  });
+
+  it("saves valid draft entries while reporting unavailable entries", async () => {
+    const executableAsset = feedItems.find(
+      (item) => item.eligibility.executable,
+    );
+    if (!executableAsset) throw new Error("EXECUTABLE_FIXTURE_MISSING");
+    const insertedItems: (readonly unknown[])[] = [];
+    const query = vi.fn(async (text: string, values?: readonly unknown[]) => {
+      if (text.includes("insert into app.baskets")) {
+        return {
+          rows: [{ id: "44444444-4444-4444-8444-444444444444" }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("insert into app.basket_items")) {
+        insertedItems.push(values ?? []);
+      }
+      if (text.includes("select source_kind")) {
+        return {
+          rows: [
+            {
+              source_kind: "asset",
+              source_id: executableAsset.id,
+              source_version_id: null,
+              source_snapshot: {},
+              title_snapshot: executableAsset.name,
+              amount_cents: 5000,
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+
+    const response = await request(
+      createApp(
+        database(vi.fn(), query),
+        undefined,
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    )
+      .put("/api/baskets/draft")
+      .set("Authorization", "Bearer verified-token")
+      .send({
+        items: [
+          { id: executableAsset.id, kind: "asset", amountUsd: 50 },
+          { id: "product-placeholder:clmt", kind: "asset", amountUsd: 50 },
+        ],
+      });
+
+    expect(response.status).toBe(200);
+    expect(insertedItems).toHaveLength(1);
+    expect(insertedItems[0]?.[2]).toBe(executableAsset.id);
+    expect(response.body.basket.items).toHaveLength(1);
+    expect(response.body.unavailableItems).toHaveLength(1);
+  });
+
+  it("reviews valid entries once while retaining unavailable entries on retry", async () => {
+    const executableAsset = feedItems.find(
+      (item) => item.eligibility.executable,
+    );
+    if (!executableAsset) throw new Error("EXECUTABLE_FIXTURE_MISSING");
+    let orderCreated = false;
+    const query = vi.fn(async (text: string) => {
+      if (text.includes("select o.id as order_id")) {
+        return orderCreated
+          ? {
+              rows: [
+                {
+                  order_id: "55555555-5555-4555-8555-555555555555",
+                  order_status: "draft",
+                  basket_id: "44444444-4444-4444-8444-444444444444",
+                },
+              ],
+              rowCount: 1,
+            }
+          : { rows: [], rowCount: 0 };
+      }
+      if (text.includes("insert into app.baskets")) {
+        return {
+          rows: [{ id: "44444444-4444-4444-8444-444444444444" }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("insert into app.orders")) {
+        orderCreated = true;
+        return {
+          rows: [{ id: "55555555-5555-4555-8555-555555555555" }],
+          rowCount: 1,
+        };
+      }
+      if (text.includes("select source_kind")) {
+        return {
+          rows: [
+            {
+              source_kind: "asset",
+              source_id: executableAsset.id,
+              source_version_id: null,
+              source_snapshot: {},
+              title_snapshot: executableAsset.name,
+              amount_cents: 5000,
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const app = request(
+      createApp(
+        database(vi.fn(), query),
+        undefined,
+        undefined,
+        undefined,
+        authProvider(),
+      ),
+    );
+    const review = () =>
+      app
+        .post("/api/baskets/review")
+        .set("Authorization", "Bearer verified-token")
+        .set("Idempotency-Key", "r5-1-mixed-review")
+        .send({
+          items: [
+            { id: executableAsset.id, kind: "asset", amountUsd: 50 },
+            { id: "product-placeholder:clmt", kind: "asset", amountUsd: 50 },
+          ],
+        });
+
+    const first = await review();
+    const retry = await review();
+
+    expect(first.status).toBe(201);
+    expect(retry.status).toBe(200);
+    expect(first.body.order.id).toBe(retry.body.order.id);
+    expect(first.body.basket.items).toHaveLength(1);
+    expect(retry.body.basket.items).toHaveLength(1);
+    expect(first.body.unavailableItems).toHaveLength(1);
+    expect(retry.body.unavailableItems).toHaveLength(1);
+    expect(
+      query.mock.calls.filter(([text]) =>
+        String(text).includes("insert into app.orders"),
+      ),
+    ).toHaveLength(1);
   });
 
   it("stores selected idea version and snapshot during basket draft save", async () => {

@@ -13,11 +13,17 @@ import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import type { ServiceStatus } from "../../app/use-service-health";
 import { useAuth } from "../../auth/auth-context";
-import { reviewBasket } from "../../services/api";
+import { BasketReviewUnavailableError, reviewBasket } from "../../services/api";
 import { useBasket } from "../../state/basket-context";
 import { WalletMenu } from "./WalletMenu";
 
 export type AppView = "feed" | "ideas" | "portfolio" | "account" | "activity";
+
+type UnavailableBasketItem = {
+  id: string;
+  kind: "asset" | "idea";
+  reason: string;
+};
 
 const navigation = [
   { id: "feed", label: "Feed", Icon: GalleryVerticalEnd },
@@ -48,6 +54,9 @@ export function AppShell({
   const [preparedReview, setPreparedReview] = useState<
     BasketReviewResponse | undefined
   >();
+  const [unavailableItems, setUnavailableItems] = useState<
+    UnavailableBasketItem[]
+  >([]);
   const basketTotal = basket.entries.reduce(
     (total, entry) => total + (entry.amountUsd ?? 0),
     0,
@@ -57,6 +66,13 @@ export function AppShell({
     basket.entries.every(
       (entry) => Number.isFinite(entry.amountUsd) && entry.amountUsd >= 0.1,
     );
+  const currentUnavailableItems = unavailableItems.filter((unavailableItem) =>
+    basket.entries.some(
+      (entry) =>
+        entry.id === unavailableItem.id && entry.kind === unavailableItem.kind,
+    ),
+  );
+  const hasUnavailableItems = currentUnavailableItems.length > 0;
   const basketFingerprint = useMemo(
     () =>
       JSON.stringify(
@@ -106,8 +122,15 @@ export function AppShell({
         accessToken,
         idempotencyKey,
       );
+      const unavailable = getUnavailableItems(review);
+      setUnavailableItems(unavailable);
       setPreparedReview(review);
-    } catch {
+    } catch (error) {
+      if (error instanceof BasketReviewUnavailableError) {
+        setUnavailableItems(error.unavailableItems);
+        setPreparedReview(undefined);
+        return;
+      }
       setPrepareError(
         "We could not prepare this basket. Check your session and try again.",
       );
@@ -222,61 +245,30 @@ export function AppShell({
                       <span>Input (you pay)</span>
                     </div>
                     {basket.entries.map((entry) => (
-                      <div
-                        className="basket-dialog-item"
+                      <BasketReviewItem
+                        entry={entry}
+                        unavailable={currentUnavailableItems.find(
+                          (item) =>
+                            item.id === entry.id && item.kind === entry.kind,
+                        )}
                         key={`${entry.kind}:${entry.id}`}
-                      >
-                        <div>
-                          <strong>{entry.title}</strong>
-                          <small>
-                            {entry.kind === "idea"
-                              ? "Prepared idea"
-                              : "Direct asset"}
-                          </small>
-                          {entry.sourceSnapshot?.type === "idea" ? (
-                            <small>
-                              {entry.sourceSnapshot.components
-                                .sort((left, right) => left.order - right.order)
-                                .map(
-                                  (component) =>
-                                    `${component.symbol} ${(component.weightBps / 100).toFixed(0)}%`,
-                                )
-                                .join(" · ")}
-                            </small>
-                          ) : null}
-                        </div>
-                        <label className="basket-amount-field">
-                          <span className="sr-only">
-                            Amount for {entry.title}
-                          </span>
-                          <b>$</b>
-                          <input
-                            type="number"
-                            min="0.1"
-                            step="0.01"
-                            inputMode="decimal"
-                            value={
-                              Number.isFinite(entry.amountUsd)
-                                ? entry.amountUsd
-                                : ""
-                            }
-                            onChange={(event) =>
-                              basket.updateAmount(
-                                entry,
-                                Number(event.target.value),
-                              )
-                            }
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          aria-label={`Remove ${entry.title} from basket`}
-                          title="Remove from basket"
-                          onClick={() => basket.remove(entry)}
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </button>
-                      </div>
+                        onAmountChange={(amountUsd) => {
+                          setPreparedReview(undefined);
+                          setUnavailableItems([]);
+                          basket.updateAmount(entry, amountUsd);
+                        }}
+                        onRemove={() => {
+                          setPreparedReview(undefined);
+                          setUnavailableItems((current) =>
+                            current.filter(
+                              (item) =>
+                                item.id !== entry.id ||
+                                item.kind !== entry.kind,
+                            ),
+                          );
+                          basket.remove(entry);
+                        }}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -301,6 +293,25 @@ export function AppShell({
                     prepared on the server. Wallet signing will be connected in
                     the Jupiter execution phase.
                   </p>
+                ) : hasUnavailableItems ? (
+                  <div className="basket-validation-note" role="alert">
+                    <strong>
+                      {currentUnavailableItems.length} selection
+                      {currentUnavailableItems.length === 1 ? " is" : "s are"}{" "}
+                      unavailable.
+                    </strong>
+                    <span>
+                      Remove unavailable selections, then review the remaining
+                      basket again.
+                    </span>
+                    <button
+                      type="button"
+                      disabled={preparing}
+                      onClick={() => void preparePurchase()}
+                    >
+                      Retry review
+                    </button>
+                  </div>
                 ) : prepareError ? (
                   <p className="basket-validation-note" role="alert">
                     {prepareError}
@@ -374,6 +385,7 @@ export function AppShell({
                 className="legacy-primary-button"
                 disabled={
                   !basketIsValid ||
+                  hasUnavailableItems ||
                   preparing ||
                   preparedForCurrentBasket ||
                   !auth.accountReady ||
@@ -419,4 +431,109 @@ export function AppShell({
 
 function idempotencyKeyForBasket(_basketFingerprint: string) {
   return crypto.randomUUID();
+}
+
+function getUnavailableItems(
+  review: BasketReviewResponse,
+): UnavailableBasketItem[] {
+  const value = (
+    review as BasketReviewResponse & {
+      unavailableItems?: unknown;
+    }
+  ).unavailableItems;
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const candidate = item as Record<string, unknown>;
+    if (
+      typeof candidate.id !== "string" ||
+      (candidate.kind !== "asset" && candidate.kind !== "idea") ||
+      typeof candidate.reason !== "string"
+    ) {
+      return [];
+    }
+    return [
+      {
+        id: candidate.id,
+        kind: candidate.kind,
+        reason: unavailableReasonMessage(candidate.reason),
+      },
+    ];
+  });
+}
+
+function unavailableReasonMessage(reason: string) {
+  const messages: Record<string, string> = {
+    BASKET_ITEM_NOT_FOUND: "This selection is no longer available.",
+    ASSET_NOT_EXECUTABLE: "This asset is not currently available to purchase.",
+    IDEA_NOT_ACTIVE: "This idea is not currently active.",
+    IDEA_MINIMUM_NOT_MET: "Increase the amount to meet this idea's minimum.",
+    IDEA_COMPONENT_NOT_EXECUTABLE:
+      "One or more assets in this idea are unavailable.",
+  };
+  return messages[reason] ?? "This selection is not currently available.";
+}
+
+function BasketReviewItem({
+  entry,
+  unavailable,
+  onAmountChange,
+  onRemove,
+}: {
+  entry: ReturnType<typeof useBasket>["entries"][number];
+  unavailable?: UnavailableBasketItem | undefined;
+  onAmountChange: (amountUsd: number) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div
+      className={
+        unavailable ? "basket-dialog-item is-unavailable" : "basket-dialog-item"
+      }
+    >
+      <div>
+        <strong>{entry.title}</strong>
+        <small>
+          {entry.kind === "idea" ? "Prepared idea" : "Direct asset"}
+        </small>
+        {entry.sourceSnapshot?.type === "idea" ? (
+          <small>
+            {entry.sourceSnapshot.components
+              .sort((left, right) => left.order - right.order)
+              .map(
+                (component) =>
+                  `${component.symbol} ${(component.weightBps / 100).toFixed(0)}%`,
+              )
+              .join(" · ")}
+          </small>
+        ) : null}
+        {unavailable ? (
+          <small className="basket-item-unavailable-reason">
+            Unavailable: {unavailable.reason}
+          </small>
+        ) : null}
+      </div>
+      <label className="basket-amount-field">
+        <span className="sr-only">Amount for {entry.title}</span>
+        <b>$</b>
+        <input
+          type="number"
+          min="0.1"
+          step="0.01"
+          inputMode="decimal"
+          value={Number.isFinite(entry.amountUsd) ? entry.amountUsd : ""}
+          onChange={(event) => onAmountChange(Number(event.target.value))}
+        />
+      </label>
+      <button
+        type="button"
+        aria-label={`Remove ${entry.title} from basket`}
+        title="Remove from basket"
+        onClick={onRemove}
+      >
+        <Trash2 aria-hidden="true" />
+      </button>
+    </div>
+  );
 }
