@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
   type AccountBootstrapResponse,
+  type BasketEntryRequest,
+  type BasketUnavailableItem,
   basketDraftRequestSchema,
   basketReviewRequestSchema,
   type FeedItem,
@@ -184,10 +186,13 @@ export function createApp(
       `,
       [userId],
     );
-    if (!draft.rows[0]) return response.json({ basket: null });
+    if (!draft.rows[0]) {
+      return response.json({ basket: null, unavailableItems: [] });
+    }
 
     return response.json({
       basket: await readDraftBasket(database, draft.rows[0].id),
+      unavailableItems: [],
     });
   });
 
@@ -211,22 +216,10 @@ export function createApp(
 
     const catalogItems = await catalogProvider.getItems();
     const ideaItems = await ideasProvider.getItems();
-    const resolvedItems = parsed.data.items.map((item) =>
-      resolveBasketInput(item, catalogItems, ideaItems),
-    );
-
-    if (resolvedItems.some((item) => item === null)) {
-      sendApiError(
-        response,
-        400,
-        "BASKET_ITEM_NOT_ELIGIBLE",
-        "One or more basket items are no longer eligible.",
-      );
-      return;
-    }
-
-    const validItems = resolvedItems.filter(
-      (item): item is NonNullable<typeof item> => item !== null,
+    const validation = validateBasketItems(
+      parsed.data.items,
+      catalogItems,
+      ideaItems,
     );
     const existing = await database.query<{ id: string }>(
       `
@@ -255,7 +248,7 @@ export function createApp(
     await database.query(`delete from app.basket_items where basket_id = $1`, [
       basketId,
     ]);
-    for (const item of validItems) {
+    for (const item of validation.validItems) {
       await database.query(
         `
           insert into app.basket_items
@@ -278,7 +271,10 @@ export function createApp(
       [basketId],
     );
 
-    return response.json({ basket: await readDraftBasket(database, basketId) });
+    return response.json({
+      basket: await readDraftBasket(database, basketId),
+      unavailableItems: validation.unavailableItems,
+    });
   });
 
   app.post("/api/baskets/review", async (request, response) => {
@@ -307,22 +303,20 @@ export function createApp(
 
     const catalogItems = await catalogProvider.getItems();
     const ideaItems = await ideasProvider.getItems();
-    const resolvedItems = parsed.data.items.map((item) =>
-      resolveBasketInput(item, catalogItems, ideaItems),
+    const validation = validateBasketItems(
+      parsed.data.items,
+      catalogItems,
+      ideaItems,
     );
-
-    if (resolvedItems.some((item) => item === null)) {
-      sendApiError(
-        response,
-        400,
-        "BASKET_ITEM_NOT_ELIGIBLE",
-        "One or more basket items are no longer eligible.",
-      );
+    if (validation.validItems.length === 0) {
+      response.status(422).json({
+        error: "BASKET_HAS_NO_ELIGIBLE_ITEMS",
+        message: "No basket items are currently eligible for review.",
+        unavailableItems: validation.unavailableItems,
+        requestId: response.locals.requestId,
+      });
       return;
     }
-    const validItems = resolvedItems.filter(
-      (item): item is NonNullable<typeof item> => item !== null,
-    );
 
     const existingOrder = await database.query<{
       order_id: string;
@@ -372,6 +366,7 @@ export function createApp(
           status: existing.order_status,
           idempotencyKey,
         },
+        unavailableItems: validation.unavailableItems,
       });
     }
 
@@ -400,7 +395,7 @@ export function createApp(
     await database.query(`delete from app.basket_items where basket_id = $1`, [
       basketId,
     ]);
-    for (const item of validItems) {
+    for (const item of validation.validItems) {
       await database.query(
         `
           insert into app.basket_items
@@ -442,8 +437,11 @@ export function createApp(
         id: basketId,
         status: "draft",
         totalUsd:
-          validItems.reduce((total, item) => total + item.amountCents, 0) / 100,
-        items: validItems.map((item) => ({
+          validation.validItems.reduce(
+            (total, item) => total + item.amountCents,
+            0,
+          ) / 100,
+        items: validation.validItems.map((item) => ({
           id: item.id,
           kind: item.kind,
           title: item.title,
@@ -453,6 +451,7 @@ export function createApp(
         })),
       },
       order: { id: orderId, status: "draft", idempotencyKey },
+      unavailableItems: validation.unavailableItems,
     });
   });
 
@@ -510,47 +509,99 @@ function sendApiError(
   });
 }
 
-function resolveBasketInput(
-  item: { id: string; kind: "asset" | "idea"; amountUsd: number },
+function validateBasketItems(
+  items: BasketEntryRequest[],
   catalogItems: FeedItem[],
   ideaItems: Idea[],
 ) {
+  const results = items.map((item) =>
+    resolveBasketInput(item, catalogItems, ideaItems),
+  );
+  return {
+    validItems: results
+      .filter(
+        (result): result is ResolvedBasketItem => result.status === "valid",
+      )
+      .map((result) => result.item),
+    unavailableItems: results
+      .filter(
+        (result): result is BasketUnavailableItemResult =>
+          result.status === "unavailable",
+      )
+      .map((result) => result.item),
+  };
+}
+
+type ResolvedBasketItem = {
+  status: "valid";
+  item: BasketEntryRequest & {
+    title: string;
+    sourceVersionId: string | null;
+    sourceSnapshot:
+      | ReturnType<typeof assetBasketSnapshot>
+      | ReturnType<typeof ideaBasketSnapshot>;
+    amountCents: number;
+  };
+};
+
+type BasketUnavailableItemResult = {
+  status: "unavailable";
+  item: BasketUnavailableItem;
+};
+
+function resolveBasketInput(
+  item: BasketEntryRequest,
+  catalogItems: FeedItem[],
+  ideaItems: Idea[],
+): ResolvedBasketItem | BasketUnavailableItemResult {
   const catalogItem =
     item.kind === "asset"
       ? catalogItems.find((asset) => asset.id === item.id)
       : ideaItems.find((idea) => idea.id === item.id);
-  if (!catalogItem) return null;
+  if (!catalogItem) return unavailableBasketItem(item, "BASKET_ITEM_NOT_FOUND");
   if (
     item.kind === "asset" &&
     !(catalogItem as FeedItem).eligibility.executable
   ) {
-    return null;
+    return unavailableBasketItem(item, "ASSET_NOT_EXECUTABLE");
   }
   if (item.kind === "idea") {
     const idea = catalogItem as Idea;
     const resolvedComponents = resolveIdeaComponents(idea, catalogItems);
-    if (
-      idea.status !== "active" ||
-      Math.round(item.amountUsd * 100) < idea.minimumInvestmentCents ||
-      !resolvedComponents
-    ) {
-      return null;
+    if (idea.status !== "active") {
+      return unavailableBasketItem(item, "IDEA_NOT_ACTIVE");
+    }
+    if (Math.round(item.amountUsd * 100) < idea.minimumInvestmentCents) {
+      return unavailableBasketItem(item, "IDEA_MINIMUM_NOT_MET");
+    }
+    if (!resolvedComponents) {
+      return unavailableBasketItem(item, "IDEA_COMPONENT_NOT_EXECUTABLE");
     }
   }
   return {
-    ...item,
-    title:
-      item.kind === "asset"
-        ? (catalogItem as FeedItem).name
-        : (catalogItem as Idea).title,
-    sourceVersionId:
-      item.kind === "idea" ? (catalogItem as Idea).version.id : null,
-    sourceSnapshot:
-      item.kind === "idea"
-        ? ideaBasketSnapshot(catalogItem as Idea, catalogItems)
-        : assetBasketSnapshot(catalogItem as FeedItem),
-    amountCents: Math.round(item.amountUsd * 100),
+    status: "valid",
+    item: {
+      ...item,
+      title:
+        item.kind === "asset"
+          ? (catalogItem as FeedItem).name
+          : (catalogItem as Idea).title,
+      sourceVersionId:
+        item.kind === "idea" ? (catalogItem as Idea).version.id : null,
+      sourceSnapshot:
+        item.kind === "idea"
+          ? ideaBasketSnapshot(catalogItem as Idea, catalogItems)
+          : assetBasketSnapshot(catalogItem as FeedItem),
+      amountCents: Math.round(item.amountUsd * 100),
+    },
   };
+}
+
+function unavailableBasketItem(
+  item: BasketEntryRequest,
+  reason: BasketUnavailableItem["reason"],
+): BasketUnavailableItemResult {
+  return { status: "unavailable", item: { ...item, reason } };
 }
 
 function assetBasketSnapshot(asset: FeedItem) {

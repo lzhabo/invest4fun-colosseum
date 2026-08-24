@@ -4,6 +4,7 @@ import {
   type BasketDraftResponse,
   type BasketEntryRequest,
   type BasketReviewResponse,
+  type BasketUnavailableItem,
   basketDraftResponseSchema,
   basketReviewResponseSchema,
   type FeedResponse,
@@ -16,6 +17,13 @@ import {
   type MarketChartResponse,
   marketChartResponseSchema,
 } from "@invest4fun/contracts";
+
+export class BasketReviewUnavailableError extends Error {
+  constructor(readonly unavailableItems: BasketUnavailableItem[]) {
+    super("BASKET_HAS_NO_ELIGIBLE_ITEMS");
+    this.name = "BasketReviewUnavailableError";
+  }
+}
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
   const response = await fetch("/api/health", signal ? { signal } : undefined);
@@ -78,7 +86,25 @@ export async function reviewBasket(
     },
     body: JSON.stringify({ items }),
   });
-  if (!response.ok) throw new Error("BASKET_REVIEW_FAILED");
+  if (!response.ok) {
+    const body: unknown = await response.json().catch(() => undefined);
+    const unavailableItems =
+      body && typeof body === "object" && "unavailableItems" in body
+        ? (body as { unavailableItems: unknown }).unavailableItems
+        : undefined;
+    const parsedUnavailableItems =
+      basketDraftResponseSchema.shape.unavailableItems.safeParse(
+        unavailableItems,
+      );
+    if (
+      response.status === 422 &&
+      parsedUnavailableItems.success &&
+      parsedUnavailableItems.data.length > 0
+    ) {
+      throw new BasketReviewUnavailableError(parsedUnavailableItems.data);
+    }
+    throw new Error("BASKET_REVIEW_FAILED");
+  }
   return basketReviewResponseSchema.parse(await response.json());
 }
 

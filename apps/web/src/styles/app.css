@@ -1864,6 +1864,9 @@ html[data-theme="dark"] .chart-controls button.selected {
   padding: 14px 0;
   border-bottom: 1px solid var(--line);
 }
+.basket-dialog-item.is-unavailable {
+  background: #fff8f6;
+}
 .basket-amount-field {
   display: flex;
   align-items: center;
@@ -1895,6 +1898,10 @@ html[data-theme="dark"] .chart-controls button.selected {
   color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
+}
+.basket-dialog-item .basket-item-unavailable-reason {
+  color: var(--coral);
+  text-transform: none;
 }
 .basket-dialog-item button {
   width: 30px;
@@ -1992,6 +1999,23 @@ html[data-theme="dark"] .chart-controls button.selected {
 .basket-validation-note {
   background: #fff1ef;
   color: var(--coral);
+}
+.basket-validation-note strong,
+.basket-validation-note span {
+  display: block;
+}
+.basket-validation-note span {
+  margin-top: 4px;
+}
+.basket-validation-note button {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
 }
 .basket-prepared-note {
   background: var(--blue-soft);

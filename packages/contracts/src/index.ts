@@ -245,6 +245,18 @@ export const basketDraftRequestSchema = z.object({
   items: z.array(basketEntryRequestSchema).max(50),
 });
 
+export const basketUnavailableReasonSchema = z.enum([
+  "BASKET_ITEM_NOT_FOUND",
+  "ASSET_NOT_EXECUTABLE",
+  "IDEA_NOT_ACTIVE",
+  "IDEA_MINIMUM_NOT_MET",
+  "IDEA_COMPONENT_NOT_EXECUTABLE",
+]);
+
+export const basketUnavailableItemSchema = basketEntryRequestSchema.extend({
+  reason: basketUnavailableReasonSchema,
+});
+
 export const assetBasketSnapshotSchema = z.object({
   type: z.literal("asset"),
   assetId: z.string().min(1),
@@ -294,6 +306,7 @@ export const basketReviewResponseSchema = z.object({
     status: z.literal("draft"),
     idempotencyKey: z.string().min(1),
   }),
+  unavailableItems: z.array(basketUnavailableItemSchema),
 });
 
 export const basketDraftSchema = z.object({
@@ -311,9 +324,11 @@ export const basketDraftSchema = z.object({
 
 export const basketDraftResponseSchema = z.object({
   basket: basketDraftSchema.nullable(),
+  unavailableItems: z.array(basketUnavailableItemSchema),
 });
 
 export type BasketEntryRequest = z.infer<typeof basketEntryRequestSchema>;
+export type BasketUnavailableItem = z.infer<typeof basketUnavailableItemSchema>;
 export type BasketSourceSnapshot = z.infer<typeof basketSourceSnapshotSchema>;
 export type BasketReviewRequest = z.infer<typeof basketReviewRequestSchema>;
 export type BasketReviewResponse = z.infer<typeof basketReviewResponseSchema>;
