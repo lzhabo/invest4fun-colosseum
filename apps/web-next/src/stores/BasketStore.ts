@@ -27,6 +27,14 @@ export class BasketStore implements BasketCommands {
     );
   }
 
+  get count(): number {
+    return this.entries.length;
+  }
+
+  get totalUsd(): number {
+    return this.entries.reduce((total, entry) => total + entry.amountUsd, 0);
+  }
+
   add(entry: BasketEntry) {
     const existing = this.entries.find(
       (candidate) => candidate.id === entry.id && candidate.kind === entry.kind,

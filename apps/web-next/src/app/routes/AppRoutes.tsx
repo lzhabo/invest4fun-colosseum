@@ -8,8 +8,8 @@ const IdeasPage = lazy(async () => ({
   default: (await import("@src/screens/Ideas/IdeasPage")).IdeasPage,
 }));
 
-const ActivityPage = lazy(async () => ({
-  default: (await import("@src/screens/Activity/ActivityPage")).ActivityPage,
+const FeedPage = lazy(async () => ({
+  default: (await import("@src/screens/Feed/FeedPage")).FeedPage,
 }));
 
 const AccountPage = lazy(async () => ({
@@ -27,29 +27,15 @@ export function AppRoutes() {
         <Routes>
           <Route
             path={ROUTES.ROOT}
-            element={<Navigate to={ROUTES.IDEAS} replace />}
+            element={<Navigate to={ROUTES.FEED} replace />}
           />
+          <Route path={ROUTES.FEED} element={<FeedPage />} />
           <Route path={ROUTES.IDEAS} element={<IdeasPage />} />
-          <Route path={ROUTES.ACTIVITY} element={<ActivityPage />} />
-          <Route
-            path={ROUTES.FEED}
-            element={<MigrationPendingPage name="Feed" />}
-          />
           <Route path={ROUTES.PORTFOLIO} element={<PortfolioPage />} />
           <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />
-          <Route path="*" element={<Navigate to={ROUTES.IDEAS} replace />} />
+          <Route path="*" element={<Navigate to={ROUTES.FEED} replace />} />
         </Routes>
       </Suspense>
     </Layout>
-  );
-}
-
-function MigrationPendingPage({ name }: { name: string }) {
-  return (
-    <RouteState
-      eyebrow="Parallel migration"
-      title={`${name} still runs in apps/web`}
-      description="This route will move here as a complete, tested vertical slice. The current application remains the behavior reference during migration."
-    />
   );
 }

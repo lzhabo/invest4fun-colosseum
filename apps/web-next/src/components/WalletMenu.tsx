@@ -24,6 +24,16 @@ const WalletButton = styled.button`
     cursor: not-allowed;
     opacity: 0.55;
   }
+
+  @media (max-width: 520px) {
+    gap: 0;
+    padding: 0 12px;
+
+    .wallet-label,
+    .wallet-chevron {
+      display: none;
+    }
+  }
 `;
 
 const Menu = styled.div`
@@ -140,10 +150,13 @@ export const WalletMenu = observer(function WalletMenu() {
       <WalletButton
         type="button"
         disabled={disabled}
+        aria-label={accountStore.ready ? "Connect wallet" : "Loading wallet"}
         onClick={accountStore.login}
       >
         <Wallet size={18} aria-hidden="true" />
-        {accountStore.ready ? "Connect wallet" : "Loading..."}
+        <span className="wallet-label">
+          {accountStore.ready ? "Connect wallet" : "Loading..."}
+        </span>
       </WalletButton>
     );
   }
@@ -160,11 +173,12 @@ export const WalletMenu = observer(function WalletMenu() {
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={`Wallet ${buttonLabel}`}
         onClick={() => setOpen((current) => !current)}
       >
         <Wallet size={18} aria-hidden="true" />
-        <span>{buttonLabel}</span>
-        <ChevronDown size={16} aria-hidden="true" />
+        <span className="wallet-label">{buttonLabel}</span>
+        <ChevronDown className="wallet-chevron" size={16} aria-hidden="true" />
       </WalletButton>
 
       {open ? (

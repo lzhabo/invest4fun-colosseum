@@ -1,5 +1,6 @@
 import AccountStore from "@src/stores/AccountStore";
 import { BasketStore } from "@src/stores/BasketStore";
+import FeedStore from "@src/stores/FeedStore";
 import RootStore from "@src/stores/RootStore";
 import {
   createContext,
@@ -27,4 +28,4 @@ export function useStores(): RootStore {
   return rootStore;
 }
 
-export { AccountStore, BasketStore, RootStore };
+export { AccountStore, BasketStore, FeedStore, RootStore };

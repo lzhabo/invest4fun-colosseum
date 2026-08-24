@@ -1,9 +1,9 @@
 import { ROUTES } from "@src/app/routes/routes";
 import { WalletMenu } from "@src/components/WalletMenu";
 import {
-  Activity,
   BriefcaseBusiness,
   CircleUserRound,
+  GalleryVerticalEnd,
   Lightbulb,
 } from "lucide-react";
 import type { PropsWithChildren } from "react";
@@ -27,11 +27,19 @@ const Header = styled.header`
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   background: color-mix(in srgb, ${({ theme }) => theme.colors.canvas} 92%, transparent);
   backdrop-filter: blur(16px);
+
+  @media (max-width: 760px) {
+    padding: 0 12px;
+  }
 `;
 
 const Brand = styled.strong`
   font-size: 1.15rem;
   letter-spacing: -0.04em;
+
+  @media (max-width: 760px) {
+    display: none;
+  }
 `;
 
 const Navigation = styled.nav`
@@ -54,8 +62,18 @@ const Navigation = styled.nav`
   }
 
   @media (max-width: 680px) {
+    gap: 0;
+
     a span {
-      display: none;
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
   }
 `;
@@ -66,11 +84,12 @@ export function Layout({ children }: PropsWithChildren) {
       <Header>
         <Brand>Invest4Fun</Brand>
         <Navigation aria-label="Primary navigation">
+          <NavLink to={ROUTES.FEED}>
+            <GalleryVerticalEnd size={18} aria-hidden="true" />
+            <span>Feed</span>
+          </NavLink>
           <NavLink to={ROUTES.IDEAS}>
             <Lightbulb size={18} aria-hidden="true" /> <span>Ideas</span>
-          </NavLink>
-          <NavLink to={ROUTES.ACTIVITY}>
-            <Activity size={18} aria-hidden="true" /> <span>Activity</span>
           </NavLink>
           <NavLink to={ROUTES.PORTFOLIO}>
             <BriefcaseBusiness size={18} aria-hidden="true" />

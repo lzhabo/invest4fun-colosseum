@@ -1,7 +1,9 @@
 import { accountService } from "@src/services/AccountService";
+import { feedService } from "@src/services/FeedService";
 import { createVersionedJsonStorage } from "@src/services/storage/JsonStorage";
 import AccountStore from "@src/stores/AccountStore";
 import { BasketStore } from "@src/stores/BasketStore";
+import FeedStore from "@src/stores/FeedStore";
 import { z } from "zod";
 
 const basketEntrySchema = z.object({
@@ -14,6 +16,7 @@ const basketEntrySchema = z.object({
 export default class RootStore {
   public readonly accountStore: AccountStore;
   public readonly basketStore: BasketStore;
+  public readonly feedStore: FeedStore;
 
   constructor() {
     this.accountStore = new AccountStore(this, accountService);
@@ -25,5 +28,6 @@ export default class RootStore {
         parse: (value) => basketEntrySchema.array().parse(value),
       }),
     );
+    this.feedStore = new FeedStore(feedService, this.basketStore);
   }
 }

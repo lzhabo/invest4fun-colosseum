@@ -38,8 +38,7 @@ behavior warrants them.
 | Route | Status | Notes |
 |---|---|---|
 | Ideas | Migrated foundation | Typed service, `IdeasVM`, swipe actions, cleanup, basket integration |
-| Activity | Static parity | Empty state only; no operation API exists yet |
-| Feed | Pending | Still served by `apps/web` |
+| Feed | Mocked frontend | Validated mock service, MobX state, swipe actions, and basket integration |
 | Portfolio | Static foundation | Embedded-wallet boundary and honest empty state; portfolio API is pending |
 | Account/Auth | Migrated foundation | MobX `AccountStore`, Privy bridge, API bootstrap, wallets, retry and logout |
 
