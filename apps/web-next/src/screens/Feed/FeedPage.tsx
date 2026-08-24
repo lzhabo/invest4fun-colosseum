@@ -1,10 +1,13 @@
+import { ROUTES } from "@src/app/routes/routes";
 import { AssetCard } from "@src/components/AssetCard";
 import { BasketSummary } from "@src/components/BasketSummary";
+import { FeedActions } from "@src/components/FeedActions";
 import { RouteState } from "@src/components/RouteState";
 import { useStores } from "@src/stores";
-import { ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { observer } from "mobx-react-lite";
 import { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
 const Page = styled.main`
@@ -31,6 +34,10 @@ const Heading = styled.header`
   }
 `;
 
+const Stage = styled.section`
+  min-width: 0;
+`;
+
 const Workspace = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -39,42 +46,6 @@ const Workspace = styled.div`
 
   @media (max-width: 980px) {
     grid-template-columns: 1fr;
-  }
-`;
-
-const Stage = styled.section`
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) 120px;
-  align-items: center;
-  gap: ${({ theme }) => theme.spacing.md};
-
-  @media (max-width: 760px) {
-    grid-template-columns: 1fr 1fr;
-
-    article {
-      grid-column: 1 / -1;
-      grid-row: 1;
-    }
-  }
-`;
-
-const DecisionButton = styled.button<{ $kind: "skip" | "add" }>`
-  display: flex;
-  min-height: 50px;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.pill};
-  background: ${({ theme }) => theme.colors.surface};
-  color: ${({ $kind, theme }) =>
-    $kind === "add" ? theme.colors.positive : theme.colors.negative};
-  font-weight: 700;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: wait;
-    opacity: 0.55;
   }
 `;
 
@@ -91,8 +62,15 @@ const RetryButton = styled.button`
   cursor: pointer;
 `;
 
+const CompletionActions = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: ${({ theme }) => theme.spacing.md};
+`;
+
 export const FeedPage = observer(function FeedPage() {
-  const { feedStore } = useStores();
+  const { basketStore, feedStore } = useStores();
+  const navigate = useNavigate();
   const pointerStart = useRef<{ id: number; x: number } | null>(null);
 
   useEffect(() => {
@@ -126,22 +104,14 @@ export const FeedPage = observer(function FeedPage() {
         <span>Discover assets</span>
         <h1>Token feed</h1>
         <p>
-          Swipe right or choose Add to put $25 of a token in your basket. Market
-          values are mocked for this frontend iteration.
+          Swipe right or choose Add to put 10 USDC of a token in your basket.
+          Market values are mocked for this frontend iteration.
         </p>
       </Heading>
 
       <Workspace>
         {activeItem ? (
           <Stage>
-            <DecisionButton
-              type="button"
-              $kind="skip"
-              disabled={Boolean(feedStore.decision)}
-              onClick={() => feedStore.decide("skip")}
-            >
-              <ChevronLeft size={19} /> Skip
-            </DecisionButton>
             <AssetCard
               item={activeItem}
               decision={feedStore.decision}
@@ -169,14 +139,13 @@ export const FeedPage = observer(function FeedPage() {
                 feedStore.setDragX(0);
               }}
             />
-            <DecisionButton
-              type="button"
-              $kind="add"
-              disabled={Boolean(feedStore.decision)}
-              onClick={() => feedStore.decide("add")}
-            >
-              Add <ChevronRight size={19} />
-            </DecisionButton>
+            <FeedActions
+              basketCount={basketStore.count}
+              decisionPending={Boolean(feedStore.decision)}
+              onSkip={() => feedStore.decide("skip")}
+              onReview={() => navigate(ROUTES.BASKET)}
+              onAdd={() => feedStore.decide("add")}
+            />
           </Stage>
         ) : (
           <RouteState
@@ -184,12 +153,21 @@ export const FeedPage = observer(function FeedPage() {
             title="You reviewed every token."
             description="Your selections are waiting in the basket."
           >
-            <RetryButton type="button" onClick={feedStore.restart}>
-              <RotateCcw size={17} /> Start again
-            </RetryButton>
+            <CompletionActions>
+              <RetryButton type="button" onClick={feedStore.restart}>
+                <RotateCcw size={17} /> Start again
+              </RetryButton>
+              {basketStore.count > 0 ? (
+                <RetryButton
+                  type="button"
+                  onClick={() => navigate(ROUTES.BASKET)}
+                >
+                  Review basket ({basketStore.count})
+                </RetryButton>
+              ) : null}
+            </CompletionActions>
           </RouteState>
         )}
-
         <BasketSummary />
       </Workspace>
     </Page>

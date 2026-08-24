@@ -11,9 +11,7 @@ const Basket = styled.aside`
   border-radius: ${({ theme }) => theme.radii.lg};
   background: ${({ theme }) => theme.colors.surface};
 
-  @media (max-width: 980px) {
-    position: static;
-  }
+  @media (max-width: 980px) { position: static; }
 `;
 
 const Heading = styled.header`
@@ -23,18 +21,8 @@ const Heading = styled.header`
   gap: 12px;
   margin-bottom: ${({ theme }) => theme.spacing.md};
 
-  h2 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0;
-    font-size: 1rem;
-  }
-
-  span {
-    color: ${({ theme }) => theme.colors.textMuted};
-    font-size: 0.82rem;
-  }
+  h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1rem; }
+  span { color: ${({ theme }) => theme.colors.textMuted}; font-size: 0.82rem; }
 `;
 
 const Empty = styled.p`
@@ -50,15 +38,8 @@ const Entry = styled.div`
   padding: 14px 0;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 
-  strong {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  small {
-    color: ${({ theme }) => theme.colors.textMuted};
-  }
+  strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  small { color: ${({ theme }) => theme.colors.textMuted}; }
 `;
 
 const RemoveButton = styled.button`
@@ -74,10 +55,7 @@ const RemoveButton = styled.button`
   color: ${({ theme }) => theme.colors.textMuted};
   cursor: pointer;
 
-  &:hover {
-    background: ${({ theme }) => theme.colors.canvas};
-    color: ${({ theme }) => theme.colors.negative};
-  }
+  &:hover { background: ${({ theme }) => theme.colors.canvas}; color: ${({ theme }) => theme.colors.negative}; }
 `;
 
 const Total = styled.div`
@@ -98,14 +76,15 @@ export const BasketSummary = observer(function BasketSummary() {
         </h2>
         <span>{basketStore.count} selected</span>
       </Heading>
-
       {basketStore.entries.length === 0 ? (
-        <Empty>Add a token from the feed. Each selection starts at $25.</Empty>
+        <Empty>
+          Add a token from the feed. Each selection starts at 10 USDC.
+        </Empty>
       ) : (
         basketStore.entries.map((entry) => (
           <Entry key={`${entry.kind}:${entry.id}`}>
             <strong>{entry.title}</strong>
-            <small>${entry.amountUsd.toLocaleString()}</small>
+            <small>{entry.amountUsd.toLocaleString()} USDC</small>
             <RemoveButton
               type="button"
               aria-label={`Remove ${entry.title}`}
@@ -116,11 +95,10 @@ export const BasketSummary = observer(function BasketSummary() {
           </Entry>
         ))
       )}
-
       {basketStore.entries.length > 0 ? (
         <Total>
           <span>Total</span>
-          <strong>${basketStore.totalUsd.toLocaleString()}</strong>
+          <strong>{basketStore.totalUsd.toLocaleString()} USDC</strong>
         </Total>
       ) : null}
     </Basket>

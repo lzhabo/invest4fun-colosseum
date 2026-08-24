@@ -86,7 +86,7 @@ export default class FeedStore {
         id: item.id,
         title: `${item.symbol} · ${item.name}`,
         kind: "asset",
-        amountUsd: 25,
+        amountUsd: 10,
       });
     }
 

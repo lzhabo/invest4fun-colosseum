@@ -12,6 +12,10 @@ const FeedPage = lazy(async () => ({
   default: (await import("@src/screens/Feed/FeedPage")).FeedPage,
 }));
 
+const BasketPage = lazy(async () => ({
+  default: (await import("@src/screens/Basket/BasketPage")).BasketPage,
+}));
+
 const AccountPage = lazy(async () => ({
   default: (await import("@src/screens/Account/AccountPage")).AccountPage,
 }));
@@ -30,6 +34,7 @@ export function AppRoutes() {
             element={<Navigate to={ROUTES.FEED} replace />}
           />
           <Route path={ROUTES.FEED} element={<FeedPage />} />
+          <Route path={ROUTES.BASKET} element={<BasketPage />} />
           <Route path={ROUTES.IDEAS} element={<IdeasPage />} />
           <Route path={ROUTES.PORTFOLIO} element={<PortfolioPage />} />
           <Route path={ROUTES.ACCOUNT} element={<AccountPage />} />

@@ -89,7 +89,7 @@ describe("FeedStore", () => {
       id: item.id,
       title: "SOL · Solana",
       kind: "asset",
-      amountUsd: 25,
+      amountUsd: 10,
     });
     expect(store.decision).toBe("add");
     runScheduled();
